@@ -1,47 +1,70 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getNavForRole, ROLES, KEYBOARD_SHORTCUTS } from '../../config/navConfig';
+import { getNavForRole, ROLES } from '../../config/navConfig';
 
 // Icons
 const ICONS = {
   home: (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
     </svg>
   ),
   'clipboard-list': (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
     </svg>
   ),
   'credit-card': (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
     </svg>
   ),
   'chart-bar': (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   ),
   building: (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
   ),
   'shield-check': (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   ),
   'question-mark-circle': (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  chevronDown: (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+  ),
+  logout: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  ),
+  bell: (
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+  ),
+  user: (
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="8" r="4" />
+      <path strokeLinecap="round" d="M4 21c0-3.866 3.582-7 8-7s8 3.134 8 7" />
     </svg>
   ),
 };
 
-// Sync status component
+// Sync status badge
 const SyncBadge = ({ status }) => {
   const config = {
     online: { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500', label: 'Online' },
@@ -60,11 +83,11 @@ const SyncBadge = ({ status }) => {
 const AppShell = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [userRole] = useState(ROLES.INSPECTOR); // Mock role
+  const [userRole] = useState(ROLES.INSPECTOR);
   const [syncStatus] = useState('online');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState(null);
-  const dropdownRef = useRef(null);
+  const [expandedMenus, setExpandedMenus] = useState({});
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const navItems = getNavForRole(userRole);
   const isLoginPage = location.pathname === '/';
@@ -80,25 +103,21 @@ const AppShell = ({ children }) => {
         e.preventDefault();
         navigate('/dashboard');
       }
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        setSidebarCollapsed(!sidebarCollapsed);
+      }
       if (e.key === 'Escape') {
-        setActiveDropdown(null);
         setShowNotifications(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
+  }, [navigate, sidebarCollapsed]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setActiveDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  const toggleMenu = (id) => {
+    setExpandedMenus(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   if (isLoginPage) {
     return <>{children}</>;
@@ -110,106 +129,156 @@ const AppShell = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#F4F6F5' }}>
-      {/* Top App Bar - Full Width */}
-      <header style={{ width: '100vw', marginLeft: 'calc(-50vw + 50%)', background: '#fff', borderBottom: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div className="max-w-[1280px] mx-auto flex items-center justify-between px-4 h-14">
-          {/* Left: Logo */}
+    <div className="min-h-screen flex" style={{ background: '#F4F6F5' }}>
+      {/* Left Sidebar */}
+      <aside 
+        className={`fixed left-0 top-0 h-full bg-white border-r border-gray-200 shadow-sm z-40 flex flex-col transition-all duration-300 ${
+          sidebarCollapsed ? 'w-16' : 'w-60'
+        }`}
+      >
+        {/* Logo */}
+        <div className="h-14 flex items-center justify-between px-4 border-b border-gray-100">
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 hover:opacity-80 transition"
           >
-            <div className="flex flex-col leading-tight">
-              <span className="text-xl font-bold tracking-tight text-[#009639]">VIS</span>
-              <span className="text-[9px] text-gray-500 -mt-0.5">
-                powered by <span className="font-semibold text-[#007A2F]">Ethiotelecom</span>
-              </span>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="flex flex-col leading-tight">
+                <span className="text-xl font-bold tracking-tight text-[#009639]">VIS</span>
+                <span className="text-[9px] text-gray-500 -mt-0.5">
+                  powered by <span className="font-semibold text-[#007A2F]">Ethiotelecom</span>
+                </span>
+              </div>
+            )}
+            {sidebarCollapsed && (
+              <span className="text-xl font-bold text-[#009639]">V</span>
+            )}
           </button>
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-1 rounded hover:bg-gray-100 text-gray-400"
+            title="Toggle sidebar (Ctrl+B)"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {sidebarCollapsed ? (
+                <path d="M13 17l5-5-5-5M6 17l5-5-5-5" />
+              ) : (
+                <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />
+              )}
+            </svg>
+          </button>
+        </div>
 
-          {/* Center: Main Nav */}
-          <nav className="flex items-center gap-1" ref={dropdownRef}>
-            {navItems.map((item) => {
-              const isActive = location.pathname.startsWith(item.route);
-              const hasChildren = item.children && item.children.length > 0;
-              const isDropdownOpen = activeDropdown === item.id;
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.route || location.pathname.startsWith(item.route + '/');
+            const hasChildren = item.children && item.children.length > 0;
+            const isExpanded = expandedMenus[item.id];
 
-              return (
-                <div key={item.id} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (hasChildren) {
-                        setActiveDropdown(isDropdownOpen ? null : item.id);
-                      } else {
-                        navigate(item.route);
-                        setActiveDropdown(null);
-                      }
-                    }}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition ${
-                      isActive
-                        ? 'bg-[#009639] text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
+            return (
+              <div key={item.id} className="mb-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hasChildren) {
+                      toggleMenu(item.id);
+                    } else {
+                      navigate(item.route);
+                    }
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
+                    isActive && !hasChildren
+                      ? 'bg-[#009639] text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  title={sidebarCollapsed ? item.label : ''}
+                >
+                  <span className={isActive && !hasChildren ? 'text-white' : 'text-gray-500'}>
                     {ICONS[item.icon]}
-                    <span>{item.label}</span>
-                    {hasChildren && (
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
-                  </button>
+                  </span>
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {hasChildren && (
+                        <span className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                          {ICONS.chevronDown}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
 
-                  {/* Dropdown */}
-                  {hasChildren && isDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                      {item.children.map((child) => (
+                {/* Submenu */}
+                {hasChildren && isExpanded && !sidebarCollapsed && (
+                  <div className="ml-4 mt-1 pl-4 border-l border-gray-200">
+                    {item.children.map((child) => {
+                      const isChildActive = location.pathname === child.route;
+                      return (
                         <button
                           key={child.id}
                           type="button"
-                          onClick={() => {
-                            navigate(child.route);
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
+                          onClick={() => navigate(child.route)}
+                          className={`w-full text-left px-3 py-2 text-sm rounded-lg transition ${
+                            isChildActive
+                              ? 'bg-[#009639]/10 text-[#009639] font-medium'
+                              : 'text-gray-600 hover:bg-gray-50'
+                          }`}
                         >
                           {child.label}
                         </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
 
-          {/* Right: Status, Alerts, User */}
-          <div className="flex items-center gap-3">
-            <SyncBadge status={syncStatus} />
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-gray-100">
+          {!sidebarCollapsed && <SyncBadge status={syncStatus} />}
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className={`mt-3 w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 rounded-lg border border-red-200 hover:bg-red-50 transition ${
+              sidebarCollapsed ? 'justify-center' : ''
+            }`}
+            title="Logout"
+          >
+            {ICONS.logout}
+            {!sidebarCollapsed && <span>Logout</span>}
+          </button>
+        </div>
+      </aside>
 
+      {/* Main Content Area */}
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-60'}`}>
+        {/* Top Bar */}
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30">
+          {/* Breadcrumb / Page Title */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-400">VIS</span>
+            <span className="text-gray-300">/</span>
+            <span className="font-medium text-gray-700 capitalize">
+              {location.pathname.split('/')[1] || 'Dashboard'}
+            </span>
+          </div>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-4">
             {/* Notifications */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 rounded-lg hover:bg-gray-100 transition"
+                className="relative p-2 rounded-lg hover:bg-gray-100 transition text-gray-500"
                 title="Notifications"
               >
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
+                {ICONS.bell}
                 {notifications.length > 0 && (
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                 )}
@@ -228,61 +297,40 @@ const AppShell = ({ children }) => {
               )}
             </div>
 
-            {/* User */}
-            <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-              <div className="w-8 h-8 rounded-full bg-[#009639]/10 flex items-center justify-center">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#009639" strokeWidth="2">
-                  <circle cx="12" cy="8" r="4" />
-                  <path strokeLinecap="round" d="M4 21c0-3.866 3.582-7 8-7s8 3.134 8 7" />
-                </svg>
+            {/* User Profile */}
+            <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+              <div className="w-8 h-8 rounded-full bg-[#009639]/10 flex items-center justify-center text-[#009639]">
+                {ICONS.user}
               </div>
-              <div className="hidden md:block text-left">
+              <div className="text-left">
                 <p className="text-sm font-medium text-gray-700">Inspector</p>
                 <p className="text-[10px] text-gray-400">Addis Ababa Center</p>
               </div>
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="ml-2 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition flex items-center gap-1"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-                Logout
-              </button>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="flex-1">
-        <div className="max-w-[1280px] mx-auto px-4 py-4">
+        {/* Page Content */}
+        <main className="flex-1 p-6 overflow-auto">
           {children}
-        </div>
-      </main>
+        </main>
 
-      {/* Footer - Full Width */}
-      <footer style={{ width: '100vw', marginLeft: 'calc(-50vw + 50%)', background: '#fff', borderTop: '1px solid #e5e7eb', padding: '8px 0' }}>
-        <div className="max-w-[1280px] mx-auto px-4 flex items-center justify-between text-xs text-gray-500">
+        {/* Footer */}
+        <footer className="h-10 bg-white border-t border-gray-200 flex items-center justify-between px-6 text-xs text-gray-500">
           <div className="flex items-center gap-4">
-            <span>v1.0.0 (Desktop Client)</span>
+            <span>v1.0.0 (Desktop)</span>
             <span>•</span>
             <span>Production</span>
           </div>
           <div className="flex items-center gap-4">
             <span>Last Sync: Just now</span>
-            <button type="button" className="hover:text-[#009639]" title="Keyboard shortcuts">
-              Shortcuts (Ctrl+K)
-            </button>
+            <span>•</span>
+            <span>Ctrl+B: Toggle Sidebar</span>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 };
 
 export default AppShell;
-

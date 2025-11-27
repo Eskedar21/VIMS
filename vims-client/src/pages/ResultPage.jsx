@@ -375,155 +375,453 @@ const ResultPage = () => {
           </div>
         </div>
 
-        {/* PAGE 1: Machine Test */}
-        <div className="report-page bg-white border border-gray-200 rounded-lg shadow-lg mx-auto mb-6 p-8" style={{ maxWidth: '210mm' }}>
-          {/* Header */}
-          <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#009639] rounded-lg flex items-center justify-center text-white">{Icon.car}</div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">Awash Valley Technical Inspection S.C.</h1>
-                <p className="text-xs text-gray-500">Licensed Vehicle Inspection Center • Addis Ababa</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Ref: {VEHICLE.inspectionId}</p>
-              <p className="text-xs text-gray-400">{new Date().toLocaleString()}</p>
-            </div>
-          </div>
-
-          <h2 className="text-center text-sm font-bold text-gray-800 uppercase bg-gray-100 py-2 rounded mb-4">Technical Inspection Report</h2>
-
-          {/* Vehicle Info Grid */}
-          <div className="grid grid-cols-4 gap-3 mb-4 text-sm">
-            {[
-              { label: 'Plate', value: VEHICLE.plate, bold: true },
-              { label: 'Owner', value: VEHICLE.owner },
-              { label: 'Brand/Model', value: VEHICLE.brandModel },
-              { label: 'Type', value: VEHICLE.vehicleType },
-              { label: 'Chassis', value: VEHICLE.chassis, mono: true, small: true },
-              { label: 'Engine', value: VEHICLE.engine, mono: true },
-              { label: 'Fuel', value: VEHICLE.fuelType },
-              { label: 'Km', value: Number(VEHICLE.kilometerReading).toLocaleString() },
-            ].map((item, i) => (
-              <div key={i} className="bg-gray-50 rounded p-2">
-                <p className="text-[10px] text-gray-400 uppercase">{item.label}</p>
-                <p className={`font-semibold ${item.bold ? 'text-lg' : ''} ${item.mono ? 'font-mono' : ''} ${item.small ? 'text-xs' : ''}`}>{item.value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Machine Test Results */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {machineResults.map(test => (
-              <div key={test.id} className={`border rounded-lg p-3 ${test.result === 'PASS' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-bold text-gray-900">{test.title}</h4>
-                  <span className={`px-2 py-0.5 text-xs font-bold rounded ${test.result === 'PASS' ? 'bg-green-200 text-green-700' : 'bg-red-200 text-red-600'}`}>{test.result}</span>
+        {/* PAGE 1: Machine Test - Lideta Style */}
+        <div className="report-page bg-white border border-gray-300 rounded-lg shadow-lg mx-auto mb-6 p-6" style={{ maxWidth: '210mm', fontSize: '11px' }}>
+          {/* Header - Lideta Style */}
+          <div className="border-b-2 border-gray-800 pb-3 mb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-14 h-14 border-2 border-gray-400 rounded flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-center leading-tight">PSTS<br/>LOGO</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {Object.entries(test.fields).slice(0, 3).map(([key, data]) => (
-                    <div key={key} className="text-center">
-                      <p className="text-[9px] text-gray-500 uppercase">{key}</p>
-                      <p className={`text-sm font-bold ${data.result === 'PASS' ? 'text-green-700' : 'text-red-600'}`}>{typeof data.value === 'number' ? data.value.toFixed(1) : data.value}</p>
-                    </div>
-                  ))}
+                <div>
+                  <h1 className="text-base font-bold text-gray-900 uppercase">Awash Valley Technical Inspection S.C.</h1>
+                  <p className="text-[10px] text-gray-600">LIDETA INFRONT OF POLICE HOSPITAL - ADDIS ABABA</p>
                 </div>
               </div>
-            ))}
+              <div className="text-right text-[10px]">
+                <p>Phone 1: <strong>+251-11-153639</strong></p>
+                <p>Fax: <strong>000000000</strong></p>
+              </div>
+            </div>
           </div>
 
-          {/* Machine Result Summary */}
-          <div className={`text-center p-4 rounded-lg ${machinePass ? 'bg-green-100 border-2 border-green-400' : 'bg-red-100 border-2 border-red-400'}`}>
-            <p className="text-xs text-gray-600 uppercase">Machine Test Result</p>
-            <p className={`text-2xl font-bold ${machinePass ? 'text-green-700' : 'text-red-600'}`}>{machinePass ? '✓ ALL TESTS PASSED' : '✗ TESTS FAILED'}</p>
+          {/* Client & Vehicle Data Table */}
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <div className="border border-gray-300">
+              <div className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1">CLIENT DATA</div>
+              <table className="w-full text-[10px]">
+                <tbody>
+                  <tr><td className="px-2 py-1 border-b">Name:</td><td className="px-2 py-1 border-b font-semibold">{VEHICLE.owner}</td></tr>
+                  <tr><td className="px-2 py-1 border-b">Address:</td><td className="px-2 py-1 border-b">Addis Ababa</td></tr>
+                  <tr><td className="px-2 py-1 border-b">Province:</td><td className="px-2 py-1 border-b">-</td></tr>
+                  <tr><td className="px-2 py-1">Phone:</td><td className="px-2 py-1">-</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="border border-gray-300">
+              <div className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1">VEHICLE INFORMATION</div>
+              <table className="w-full text-[10px]">
+                <tbody>
+                  <tr><td className="px-2 py-1 border-b w-32">Licence plate number:</td><td className="px-2 py-1 border-b font-bold">{VEHICLE.plate}</td><td className="px-2 py-1 border-b w-12">Km.:</td><td className="px-2 py-1 border-b font-semibold">{VEHICLE.kilometerReading}</td></tr>
+                  <tr><td className="px-2 py-1 border-b">Brand / Model:</td><td colSpan="3" className="px-2 py-1 border-b font-semibold">{VEHICLE.brandModel}</td></tr>
+                  <tr><td className="px-2 py-1 border-b">Chassis:</td><td className="px-2 py-1 border-b font-mono text-[9px]">{VEHICLE.chassis}</td><td className="px-2 py-1 border-b">Motor Nº:</td><td className="px-2 py-1 border-b font-mono text-[9px]">{VEHICLE.engine}</td></tr>
+                  <tr><td className="px-2 py-1">Test start:</td><td colSpan="3" className="px-2 py-1 font-semibold">{VEHICLE.testStartTime}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="flex justify-between items-center mt-4 pt-4 border-t text-xs text-gray-500 print-hide">
-            <p>Inspector: Getu Tadesse</p>
-            <p>Page 1 of 2</p>
-            <p>Chief: Alemayehu Bekele</p>
+          <div className="text-[10px] mb-2 flex gap-4">
+            <span>Technician: <strong>GETU</strong></span>
+            <span>Lane Nº: <strong>1</strong></span>
+            <span>Lane type: <strong>-</strong></span>
+            <span>Inspection Nº: <strong>{VEHICLE.inspectionId.slice(-2)}</strong></span>
+          </div>
+
+          {/* ALIGNMENT Section */}
+          <table className="w-full border border-gray-400 text-[10px] mb-2">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border px-2 py-1 text-left w-24"></th>
+                <th className="border px-2 py-1">MEASUREMENT</th>
+                <th className="border px-2 py-1">AXLE Nº1</th>
+                <th className="border px-2 py-1">AXLE Nº2</th>
+                <th className="border px-2 py-1">AXLE Nº3</th>
+                <th className="border px-2 py-1">AXLE Nº4</th>
+                <th className="border px-2 py-1 w-20">Limits</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowSpan="5" className="border px-2 py-1 font-bold bg-gray-50 align-top">ALIGNMENT<br/>SUSPENSION</td>
+                <td className="border px-2 py-1">Deviation (m/km)</td>
+                <td className="border px-2 py-1 text-center font-semibold">-2.0</td>
+                <td className="border px-2 py-1 text-center">0.0</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center text-[9px]">m/Km &lt;= 7</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Left Efficiency (%)</td>
+                <td className="border px-2 py-1 text-center font-semibold">58</td>
+                <td className="border px-2 py-1 text-center">52</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td rowSpan="4" className="border px-2 py-1 text-[9px] align-top">
+                  <div className="text-right">
+                    <p>% Sport Comfort</p>
+                    <p>Defect &gt;= 41 &gt;= 41</p>
+                    <p>Weak &gt;= 41 &gt;= 41</p>
+                    <p>Diff. &lt;= 30 &lt;= 30</p>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Right Efficiency (%)</td>
+                <td className="border px-2 py-1 text-center font-semibold">54</td>
+                <td className="border px-2 py-1 text-center">48</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Difference (%)</td>
+                <td className="border px-2 py-1 text-center">7</td>
+                <td className="border px-2 py-1 text-center">8</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Suspension type:</td>
+                <td colSpan="4" className="border px-2 py-1">Sport</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* BRAKES Section */}
+          <table className="w-full border border-gray-400 text-[10px] mb-2">
+            <tbody>
+              <tr>
+                <td rowSpan="12" className="border px-2 py-1 font-bold bg-gray-50 align-top w-24">BRAKES</td>
+                <td colSpan="5" className="border px-2 py-1 font-semibold bg-gray-100">SERVICE BRAKE</td>
+                <td rowSpan="5" className="border px-2 py-1 text-[9px] align-top w-20">
+                  <p className="text-center font-semibold">%</p>
+                  <p>Diff. &lt;= 30</p>
+                  <p>Serv. &gt;= 50</p>
+                  <p>Hand &gt;= 25</p>
+                </td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Left Force (KN)</td>
+                <td className="border px-2 py-1 text-center font-semibold">17.53</td>
+                <td className="border px-2 py-1 text-center">11.00</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Right Force (KN)</td>
+                <td className="border px-2 py-1 text-center font-semibold">14.90</td>
+                <td className="border px-2 py-1 text-center">9.46</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Axle Difference (%)</td>
+                <td className="border px-2 py-1 text-center">15</td>
+                <td className="border px-2 py-1 text-center">14</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Efficiency axle (%)</td>
+                <td className="border px-2 py-1 text-center font-semibold">77</td>
+                <td className="border px-2 py-1 text-center">57</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Total Efficiency(%):</td>
+                <td colSpan="4" className="border px-2 py-1 text-center font-bold text-green-700">69</td>
+                <td className="border px-2 py-1"></td>
+              </tr>
+              <tr>
+                <td colSpan="5" className="border px-2 py-1 font-semibold bg-gray-100">PARKING BRAKE</td>
+                <td className="border px-2 py-1"></td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Left Force (KN)</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center font-semibold">12.57</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1"></td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Right Force (KN)</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center font-semibold">10.05</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1"></td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Axle Difference (%)</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">20</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1"></td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Total Efficiency(%):</td>
+                <td colSpan="4" className="border px-2 py-1 text-center font-bold text-green-700">30</td>
+                <td className="border px-2 py-1"></td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1">Axle Weight (Kg)</td>
+                <td className="border px-2 py-1 text-center font-semibold">4212</td>
+                <td className="border px-2 py-1 text-center">3588</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1 text-center">-</td>
+                <td className="border px-2 py-1"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* TOTAL Row */}
+          <div className="border border-gray-400 p-2 mb-2 flex justify-between items-center bg-gray-50">
+            <span className="font-bold">TOTAL</span>
+            <span>Vehicle efficiency: <strong className={`text-lg ${69 >= 50 ? 'text-green-700' : 'text-red-600'}`}>69</strong></span>
+            <span>Peso Vehiculo (Kg): <strong>7800</strong></span>
+          </div>
+
+          {/* GAS ANALYZER */}
+          <table className="w-full border border-gray-400 text-[10px] mb-2">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border px-2 py-1 text-left w-28">GAS ANALYZER</th>
+                <th className="border px-1 py-1">HC (ppm)</th>
+                <th className="border px-1 py-1">CO (%)</th>
+                <th className="border px-1 py-1">CO2 (%)</th>
+                <th className="border px-1 py-1">COcorr (%)</th>
+                <th className="border px-1 py-1">O2 (%)</th>
+                <th className="border px-1 py-1">Lambda</th>
+                <th className="border px-1 py-1">Temp.</th>
+                <th className="border px-1 py-1">RPM</th>
+                <th className="border px-2 py-1 w-24 text-[9px]">Limits</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border px-2 py-1 font-bold bg-gray-50">SMOKE METER</td>
+                <td className="border px-1 py-1 text-center">55.25</td>
+                <td className="border px-1 py-1 text-center">56.20</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td rowSpan="2" className="border px-2 py-1 text-[8px]">
+                  HC: 0-600<br/>CO2: 12-16<br/>Lamb: 0.97-1.03
+                </td>
+              </tr>
+              <tr>
+                <td className="border px-2 py-1 text-[9px]">(K)</td>
+                <td className="border px-1 py-1 text-center">1.87</td>
+                <td className="border px-1 py-1 text-center">1.92</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+                <td className="border px-1 py-1 text-center">0.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* HEADLIGHT */}
+          <table className="w-full border border-gray-400 text-[10px] mb-3">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border px-2 py-1 text-left w-28">HEADLIGHT</th>
+                <th className="border px-2 py-1">Dipped Lf.</th>
+                <th className="border px-2 py-1">Dipped Rg.</th>
+                <th className="border px-2 py-1">Full Lf.</th>
+                <th className="border px-2 py-1">Full Rg.</th>
+                <th className="border px-2 py-1">Fog Lf.</th>
+                <th className="border px-2 py-1">Fog Rg.</th>
+                <th className="border px-2 py-1 w-24 text-[9px]">Limits</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border px-2 py-1">Intensity (cd)</td>
+                <td className="border px-2 py-1 text-center font-semibold">9451</td>
+                <td className="border px-2 py-1 text-center font-semibold">25657</td>
+                <td className="border px-2 py-1 text-center">3490</td>
+                <td className="border px-2 py-1 text-center">2040</td>
+                <td className="border px-2 py-1 text-center">9251</td>
+                <td className="border px-2 py-1 text-center">5541</td>
+                <td className="border px-2 py-1 text-[8px]">
+                  Dipped: 7000-1000000<br/>Full: 10000-1000000<br/>Fog: 800-1000000
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Footer Signatures */}
+          <div className="grid grid-cols-3 border-t-2 border-gray-800 pt-3 text-[10px]">
+            <div className="text-center">
+              <p className="font-bold uppercase">Inspector</p>
+              <p className="mt-4 pt-4 border-t border-gray-400 mx-4">Getu Tadesse</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold uppercase">Result</p>
+              <p className={`text-2xl font-bold mt-2 ${machinePass ? 'text-green-700' : 'text-red-600'}`}>
+                {machinePass ? 'PASS' : 'FAIL'}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold uppercase">Chief</p>
+              <p className="mt-4 pt-4 border-t border-gray-400 mx-4">Alemayehu Bekele</p>
+            </div>
           </div>
         </div>
 
-        {/* PAGE 2: Visual Inspection */}
-        <div className="report-page bg-white border border-gray-200 rounded-lg shadow-lg mx-auto p-8" style={{ maxWidth: '210mm' }}>
-          <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#009639] rounded-lg flex items-center justify-center text-white">{Icon.eye}</div>
+        {/* PAGE 2: Visual Inspection - Heavy/Regular Vehicle Form Style */}
+        <div className={`report-page border rounded-lg shadow-lg mx-auto p-6 ${VEHICLE.category === 'HEAVY' ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-300'}`} style={{ maxWidth: '210mm', fontSize: '10px' }}>
+          {/* Header - Official Form Style */}
+          <div className="border-b-2 border-gray-800 pb-3 mb-3">
+            <div className="text-center">
+              <p className="text-[9px] text-gray-600">በአዲስ አበባ ከተማ አስተዳደር የሾፌሮችና ተሽከርካሪዎች ፈቃድና ቁጥጥር ባለስልጣን</p>
+              <p className="text-xs font-semibold">City Government of A.A Driver And Vehicles Licensing And Control Authority</p>
+              <p className="text-[9px] text-gray-600 mt-1">{VEHICLE.category === 'HEAVY' ? 'የከባድ ተሽከርካሪዎች ዓመታዊ የቴክኒክ ምርመራ ቅጽ' : 'የህዝብ አገልግሎት ተሽከርካሪ የእይታ ምርመራ ቅጽ'}</p>
+              <h1 className={`text-sm font-bold mt-1 ${VEHICLE.category === 'HEAVY' ? 'text-amber-800' : 'text-blue-800'}`}>
+                {VEHICLE.category === 'HEAVY' ? 'Heavy Vehicles Annual Technical Inspection Form' : 'Public Service Transport Service - Visual Inspection Form'}
+              </h1>
+            </div>
+            <div className="flex justify-end text-[9px] mt-1">
+              <span>ቁጥር / No. <strong className="border-b border-gray-400 px-2">{VEHICLE.inspectionId.slice(-4)}</strong></span>
+            </div>
+          </div>
+
+          {/* Vehicle Info Header */}
+          <div className="grid grid-cols-3 gap-2 mb-3 text-[10px]">
+            <div className="flex"><span className="w-24">የምርመራ ቁጥር:</span><span className="border-b border-gray-400 flex-1 font-semibold px-1">{VEHICLE.inspectionId}</span></div>
+            <div className="flex"><span className="w-20">የሰሌዳ ቁጥር:</span><span className="border-b border-gray-400 flex-1 font-semibold px-1">{VEHICLE.plate}</span></div>
+            <div className="flex"><span className="w-24">የባለቤት ስም:</span><span className="border-b border-gray-400 flex-1 font-semibold px-1">{VEHICLE.owner}</span></div>
+            <div className="flex"><span className="w-24">የባለቤትነት ደብተር:</span><span className="border-b border-gray-400 flex-1 px-1">-</span></div>
+            <div className="flex"><span className="w-20">የሻሲ ቁጥር:</span><span className="border-b border-gray-400 flex-1 font-mono text-[9px] px-1">{VEHICLE.chassis}</span></div>
+            <div className="flex"><span className="w-20">የሞተር ቁጥር:</span><span className="border-b border-gray-400 flex-1 font-mono text-[9px] px-1">{VEHICLE.engine}</span></div>
+          </div>
+
+          {/* 30-Point Visual Inspection Table */}
+          <table className="w-full border border-gray-500 text-[9px] mb-3">
+            <thead>
+              <tr className={`${VEHICLE.category === 'HEAVY' ? 'bg-amber-200' : 'bg-gray-200'}`}>
+                <th className="border border-gray-400 px-1 py-1 w-6 text-center">ተ.ቁ</th>
+                <th className="border border-gray-400 px-1 py-1 text-left">ዝርዝር መስፈርት / Inspection Criteria</th>
+                <th className="border border-gray-400 px-1 py-1 w-12 text-center">የተሰጠዉ<br/>ነጥብ</th>
+                <th className="border border-gray-400 px-1 py-1 w-12 text-center">ትክክል<br/>Correct</th>
+                <th className="border border-gray-400 px-1 py-1 w-14 text-center">ትክክልያልሆነ<br/>Not Correct</th>
+                <th className="border border-gray-400 px-1 py-1 w-16 text-center">ምመሪ<br/>Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { no: 1, am: 'የምዝገባ ሰሌዳና የባለቤትነት', en: 'Reg Plate & Ownership', pts: 8, pass: true },
+                { no: 2, am: 'የፊት ማቆሚያ መብራቶች', en: 'Front Position Lights', pts: null, pass: true },
+                { no: 3, am: 'የኋላ ማቆሚያ መብራቶች', en: 'Rear Position Lights', pts: null, pass: true },
+                { no: 4, am: 'የፍሬን መብራቶች', en: 'Brake Lights', pts: 10, pass: true },
+                { no: 5, am: 'የኋላ መብራቶች', en: 'Reverse Lights', pts: null, pass: true },
+                { no: 6, am: 'የማዞሪያ መብራቶች', en: 'Turn Signal Lights', pts: null, pass: true },
+                { no: 7, am: 'የማቆሚያ መብራቶች', en: 'Parking Lights', pts: null, pass: true },
+                { no: 8, am: 'የፍሬን መብራቶች (ተሳቢን ጨምሮ)', en: 'Brake Lights (incl. trailer)', pts: 14, pass: true },
+                { no: 9, am: 'የሰሌዳ መብራት', en: 'Plate Light', pts: 8, pass: true },
+                { no: 10, am: 'ጥሩምባ (ሆርን)', en: 'Horn Function', pts: null, pass: true },
+                { no: 11, am: 'የዝናብ መጥረጊያ', en: 'Windshield Wipers', pts: null, pass: true },
+                { no: 12, am: 'የመሪ ክፍሎች ሁኔታ', en: 'Steering Components', pts: null, pass: true },
+                { no: 13, am: 'የኤሌክትሪክ ክፍሎች', en: 'Electrical Components', pts: 12, pass: true },
+                { no: 14, am: 'የኃይል ማስተላለፊያ ክፍሎች', en: 'Transmission Components', pts: null, pass: true },
+                { no: 15, am: 'ጎማዎች፣ ፍሬን፣ ማርሽ', en: 'Tires, Brakes, Transmission', pts: null, pass: true },
+                { no: 16, am: 'የጎማ ናቶች', en: 'Wheel Nuts & Tires', pts: null, pass: true },
+                { no: 17, am: 'የመንቀጥቀጫ ማስወገጃ', en: 'Shock Absorbers', pts: null, pass: true },
+                { no: 18, am: 'የጭስ ማስወጫ', en: 'Exhaust System', pts: null, pass: true },
+                { no: 19, am: 'የነዳጅ ስርዓት', en: 'Fuel System', pts: null, pass: true },
+                { no: 20, am: 'ጎማዎች', en: 'Tires', pts: null, pass: true },
+                { no: 21, am: 'የፍጥነት ገደብና GPS', en: 'Speed Limiter & GPS (Heavy)', pts: null, pass: VEHICLE.category !== 'HEAVY' || true },
+                { no: 22, am: 'የሰውነትና መስታወቶች', en: 'Body & Mirrors', pts: null, pass: true },
+                { no: 23, am: 'የተሳፋሪ መቀመጫዎች', en: 'Passenger Seats (Heavy)', pts: null, pass: true },
+                { no: 24, am: 'የእሳት ማጥፊያ', en: 'Fire Extinguisher', pts: null, pass: true },
+                { no: 25, am: 'የመጀመሪያ ህክምና ሳጥን', en: 'First Aid Kit', pts: null, pass: true },
+                { no: 26, am: 'የማስጠንቀቂያ ሶስት ማዕዘን', en: 'Warning Triangle', pts: null, pass: true },
+                { no: 27, am: 'የተሽከርካሪ መስታወቶች', en: 'Vehicle Mirrors', pts: null, pass: true },
+                { no: 28, am: 'የጎን መስታወቶች', en: 'Side Mirrors', pts: null, pass: true },
+                { no: 29, am: 'መጠባበቂያ ጎማ', en: 'Spare Wheel', pts: null, pass: true },
+                { no: 30, am: 'ጭቃ መከላከያ', en: 'Mudguards', pts: null, pass: true },
+              ].map((item, i) => (
+                <tr key={i} className={i % 2 === 0 ? '' : 'bg-gray-50'}>
+                  <td className="border border-gray-400 px-1 py-0.5 text-center">{item.no}.</td>
+                  <td className="border border-gray-400 px-1 py-0.5">
+                    <span className="text-[8px] text-gray-600">{item.am}</span><br/>
+                    <span className="font-medium">{item.en}</span>
+                  </td>
+                  <td className="border border-gray-400 px-1 py-0.5 text-center font-semibold">{item.pts || '-'}</td>
+                  <td className="border border-gray-400 px-1 py-0.5 text-center">
+                    {item.pass && <span className="text-green-700 font-bold">✓</span>}
+                  </td>
+                  <td className="border border-gray-400 px-1 py-0.5 text-center">
+                    {!item.pass && <span className="text-red-600 font-bold">✗</span>}
+                  </td>
+                  <td className="border border-gray-400 px-1 py-0.5 text-center text-gray-400">-</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Summary & Signatures */}
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <div className="border border-gray-400 p-2">
+              <p className="text-[9px] text-gray-600">የመርማሪ ፊርማ / Inspector Signature</p>
+              <div className="flex justify-between mt-2">
+                <div><p className="text-[9px]">ስም:</p><p className="font-semibold">Getu Tadesse</p></div>
+                <div><p className="text-[9px]">ፊርማ:</p><p className="italic border-b border-gray-400 w-20">_________</p></div>
+              </div>
+            </div>
+            <div className="border border-gray-400 p-2">
+              <p className="text-[9px] text-gray-600">የኃላፊ ፊርማ / Chief Signature</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-[9px]">ቀን / Date:</p>
+                  <p className="font-semibold">{inspectionDate}</p>
+                </div>
+                <div className={`text-xl font-bold ${overallResult === 'PASS' ? 'text-green-700' : 'text-red-600'}`}>
+                  {overallResult === 'PASS' ? 'አልፏል' : 'አላለፈም'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Overall Combined Result */}
+          <div className={`border-2 p-3 text-center ${overallResult === 'PASS' ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
+            <p className="text-[9px] text-gray-600">የጠቅላላ ውጤት / Overall Result</p>
+            <p className="text-xs">የተሽከርካሪው የምርመራ ውጤት ከ 80% በታች ከሆነ ብቁ አይደለም ተብሎ ይቆጠራል</p>
+            <div className="flex justify-center items-center gap-8 mt-2">
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Awash Valley Technical Inspection S.C.</h1>
-                <p className="text-xs text-gray-500">30-Point Visual Inspection Checklist</p>
+                <p className="text-[9px]">Machine Test:</p>
+                <p className={`font-bold ${machinePass ? 'text-green-700' : 'text-red-600'}`}>{machinePass ? 'PASS' : 'FAIL'}</p>
+              </div>
+              <div className={`text-2xl font-bold px-6 py-2 rounded ${overallResult === 'PASS' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-700'}`}>
+                {overallResult}
+              </div>
+              <div>
+                <p className="text-[9px]">Visual Test:</p>
+                <p className={`font-bold ${visualPass ? 'text-green-700' : 'text-red-600'}`}>{visualPass ? 'PASS' : 'FAIL'}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Ref: {VEHICLE.inspectionId}</p>
-              <p className="text-xs text-gray-400">Form: {VEHICLE.category === 'HEAVY' ? 'HV-FORM-2025' : 'LV-FORM-2025'}</p>
-            </div>
-          </div>
-
-          <h2 className={`text-center text-sm font-bold uppercase py-2 rounded mb-4 ${VEHICLE.category === 'HEAVY' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
-            Visual Inspection Report — Page 2 of 2
-          </h2>
-
-          {/* Visual Zones Summary */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {['Identification', 'Lighting', 'Steering', 'Body', 'Safety'].map((zone, i) => (
-              <div key={i} className="bg-green-50 border border-green-200 rounded p-3 text-center">
-                <p className="text-xs text-gray-600">{zone}</p>
-                <p className="text-lg font-bold text-green-700">PASS</p>
-              </div>
-            ))}
-            <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
-              <p className="text-xs text-gray-600">Points</p>
-              <p className="text-lg font-bold text-gray-900">{visualData.earnedPoints}/{visualData.totalPoints}</p>
-            </div>
-          </div>
-
-          {/* Combined Result */}
-          <div className={`text-center p-6 rounded-lg mb-4 ${overallResult === 'PASS' ? 'bg-green-100 border-2 border-green-500' : 'bg-red-100 border-2 border-red-500'}`}>
-            <p className="text-xs text-gray-600 uppercase tracking-wide">Combined Inspection Result</p>
-            <p className={`text-3xl font-bold ${overallResult === 'PASS' ? 'text-green-700' : 'text-red-600'}`}>
-              {overallResult === 'PASS' ? '✓ VEHICLE PASSED' : '✗ VEHICLE FAILED'}
-            </p>
-            <div className="flex justify-center gap-8 mt-2 text-sm">
-              <span>Machine: <strong className={machinePass ? 'text-green-700' : 'text-red-600'}>{machinePass ? 'PASS' : 'FAIL'}</strong></span>
-              <span>Visual: <strong className={visualPass ? 'text-green-700' : 'text-red-600'}>{visualPass ? 'PASS' : 'FAIL'}</strong></span>
-            </div>
-            <p className="text-sm text-gray-500 mt-2">Valid Until: <strong>{expiryDate}</strong></p>
+            <p className="text-[9px] text-gray-500 mt-2">Valid Until: <strong>{expiryDate}</strong></p>
           </div>
 
           {paymentInfo && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Payment: <strong className="text-blue-700">{paymentInfo.method || 'TeleBirr'}</strong></span>
-                <span className="font-mono">{paymentInfo.transactionId}</span>
-                <span className="font-bold text-green-700">ETB {paymentInfo.amount}</span>
-              </div>
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 text-[10px] flex justify-between">
+              <span>Payment: <strong>{paymentInfo.method || 'TeleBirr'}</strong></span>
+              <span>Ref: <strong className="font-mono">{paymentInfo.transactionId}</strong></span>
+              <span>Amount: <strong className="text-green-700">ETB {paymentInfo.amount}</strong></span>
             </div>
           )}
 
-          {/* Signatures */}
-          <div className="grid grid-cols-3 gap-4 border-t-2 border-gray-800 pt-4">
-            <div className="text-sm">
-              <p className="text-gray-500">Inspector:</p>
-              <p className="font-semibold">Getu Tadesse</p>
-              <p className="text-gray-400 italic mt-4">Signature: ___________</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 border-2 border-gray-400 rounded mx-auto flex items-center justify-center bg-white">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/></svg>
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1">QR Verification</p>
-            </div>
-            <div className="text-right text-sm">
-              <p className="text-gray-500">Chief Inspector:</p>
-              <p className="font-semibold">Alemayehu Bekele</p>
-              <p className="text-gray-400 italic mt-4">Signature: ___________</p>
-            </div>
-          </div>
-
-          <p className="text-center text-[10px] text-gray-400 mt-4 pt-2 border-t">Page 2 of 2 • Powered by VIS • Ethiotelecom</p>
+          <p className="text-center text-[8px] text-gray-400 mt-2 pt-1 border-t">(እባክዎ ከመጠቀምዎ በፊት ትክክለኛ መሆኑን ያረጋግጡ / PLEASE MAKE SURE THAT THIS IS THE CORRECT ISSUE BEFORE USE) • ገጽ 2 ከ 2</p>
         </div>
       </div>
     );
