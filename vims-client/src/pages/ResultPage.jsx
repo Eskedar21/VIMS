@@ -1,14 +1,38 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Print styles for A4 PDF
+// Print styles for A4 PDF - fits all on one page
 const printStyles = `
 @media print {
-  @page { size: A4; margin: 10mm; }
-  html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  @page { size: A4; margin: 5mm; }
+  html, body { 
+    -webkit-print-color-adjust: exact !important; 
+    print-color-adjust: exact !important;
+    background: white !important;
+    font-size: 8px !important;
+  }
+  body > div { background: white !important; }
   .print-hide { display: none !important; }
-  .page-break { page-break-before: always; }
-  .report-page { width: 100% !important; min-height: auto !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: none !important; }
+  .page-break { page-break-before: auto !important; }
+  .report-page { 
+    width: 100% !important; 
+    min-height: auto !important; 
+    padding: 4mm !important; 
+    margin: 0 0 2mm 0 !important; 
+    box-shadow: none !important; 
+    border: 1px solid #ddd !important;
+    background: white !important;
+    page-break-inside: avoid;
+    font-size: 9px !important;
+  }
+  .report-page h1 { font-size: 12px !important; }
+  .report-page h2 { font-size: 10px !important; }
+  .report-page h3, .report-page h4 { font-size: 9px !important; }
+  .report-page p { font-size: 8px !important; }
+  .report-page .text-2xl, .report-page .text-3xl { font-size: 14px !important; }
+  .report-page .text-lg { font-size: 11px !important; }
+  header, footer, nav, .app-shell-header, .app-shell-footer { display: none !important; }
+  main { padding: 0 !important; margin: 0 !important; }
 }
 `;
 
@@ -368,7 +392,7 @@ const ResultPage = () => {
             </div>
           </div>
 
-          <h2 className="text-center text-sm font-bold text-gray-800 uppercase bg-gray-100 py-2 rounded mb-4">Machine Test Report — Page 1 of 2</h2>
+          <h2 className="text-center text-sm font-bold text-gray-800 uppercase bg-gray-100 py-2 rounded mb-4">Technical Inspection Report</h2>
 
           {/* Vehicle Info Grid */}
           <div className="grid grid-cols-4 gap-3 mb-4 text-sm">
@@ -415,7 +439,7 @@ const ResultPage = () => {
             <p className={`text-2xl font-bold ${machinePass ? 'text-green-700' : 'text-red-600'}`}>{machinePass ? '✓ ALL TESTS PASSED' : '✗ TESTS FAILED'}</p>
           </div>
 
-          <div className="flex justify-between items-center mt-4 pt-4 border-t text-xs text-gray-500">
+          <div className="flex justify-between items-center mt-4 pt-4 border-t text-xs text-gray-500 print-hide">
             <p>Inspector: Getu Tadesse</p>
             <p>Page 1 of 2</p>
             <p>Chief: Alemayehu Bekele</p>
@@ -423,7 +447,7 @@ const ResultPage = () => {
         </div>
 
         {/* PAGE 2: Visual Inspection */}
-        <div className="report-page page-break bg-white border border-gray-200 rounded-lg shadow-lg mx-auto p-8" style={{ maxWidth: '210mm' }}>
+        <div className="report-page bg-white border border-gray-200 rounded-lg shadow-lg mx-auto p-8" style={{ maxWidth: '210mm' }}>
           <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-[#009639] rounded-lg flex items-center justify-center text-white">{Icon.eye}</div>
@@ -695,7 +719,7 @@ const ResultPage = () => {
       </div>
 
       {/* Machine Test Results Grid */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden print-hide">
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
           <h3 className="text-sm font-bold text-gray-900">Machine Test Results</h3>
         </div>
@@ -708,6 +732,42 @@ const ResultPage = () => {
               </span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Visual Inspection Results */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden print-hide">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+          <h3 className="text-sm font-bold text-gray-900">Visual Inspection Results</h3>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-5 gap-3">
+            {[
+              { zone: 'Identification', items: 4, passed: 4 },
+              { zone: 'Lighting', items: 7, passed: 7 },
+              { zone: 'Steering & Suspension', items: 6, passed: 6 },
+              { zone: 'Body & Interior', items: 8, passed: 8 },
+              { zone: 'Safety Equipment', items: 5, passed: 5 },
+            ].map((zone, i) => (
+              <div key={i} className={`p-3 rounded-lg text-center ${zone.passed === zone.items ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <p className="text-xs text-gray-600 font-medium mb-1">{zone.zone}</p>
+                <p className={`text-lg font-bold ${zone.passed === zone.items ? 'text-green-700' : 'text-red-600'}`}>
+                  {zone.passed}/{zone.items}
+                </p>
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${zone.passed === zone.items ? 'text-green-600' : 'text-red-500'}`}>
+                  {zone.passed === zone.items ? <>{Icon.check} PASS</> : <>{Icon.x} FAIL</>}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Total Points:</span> {visualData.earnedPoints}/{visualData.totalPoints} ({Math.round((visualData.earnedPoints / visualData.totalPoints) * 100)}%)
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${visualPass ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+              {visualPass ? 'Visual Inspection PASSED' : 'Visual Inspection FAILED'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -736,13 +796,14 @@ const ResultPage = () => {
             <button onClick={() => setShowReport(true)} className="px-5 py-2.5 rounded-lg bg-gray-800 text-white font-semibold hover:bg-gray-700 flex items-center gap-2">
               {Icon.print} Full Report
             </button>
-            {overallResult === 'PASS' && (
-              <button onClick={handleIssueCert} className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center gap-2">
-                {Icon.certificate} Issue Certificate
-              </button>
-            )}
             <button onClick={handleExportCSV} className="px-5 py-2.5 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 flex items-center gap-2">
               {Icon.download} Export CSV
+            </button>
+            <button 
+              onClick={handleIssueCert} 
+              className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center gap-2"
+            >
+              {Icon.certificate} Issue Certificate
             </button>
           </>
         )}

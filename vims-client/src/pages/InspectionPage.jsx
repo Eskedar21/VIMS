@@ -450,7 +450,10 @@ const InspectionPage = () => {
   });
   const [showCategoryModal, setShowCategoryModal] = useState(() => {
     if (typeof window === 'undefined') return true;
-    return !window.sessionStorage.getItem('vims.inspection.category');
+    // Always show modal if no inspection ID exists (new inspection)
+    const hasInspectionId = window.sessionStorage.getItem('vims.inspection.id');
+    const hasCategory = window.sessionStorage.getItem('vims.inspection.category');
+    return !hasInspectionId || !hasCategory;
   });
   const [showSwitchWarning, setShowSwitchWarning] = useState(false);
   const [pendingCategory, setPendingCategory] = useState(null);
