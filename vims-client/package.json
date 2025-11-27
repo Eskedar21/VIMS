@@ -1,0 +1,65 @@
+{
+  "name": "vims-client",
+  "private": true,
+  "version": "1.0.0",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "concurrently \"npm run vite:dev\" \"npm run electron:start\"",
+    "vite:dev": "npx cross-env NODE_ENV=development vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:start": "wait-on http://localhost:5173 && npx cross-env NODE_ENV=development electron .",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build && electron-builder --mac",
+    "lint": "eslint .",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.22",
+    "concurrently": "^9.2.1",
+    "electron": "^39.2.3",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.14",
+    "vite": "^7.2.4",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.ethiotel.vims.kiosk",
+    "productName": "VIMS Kiosk Client",
+    "copyright": "Copyright © 2025 Ethio Telecom",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "dist/**/*",
+      "main.cjs",
+      "preload.js",
+      "package.json"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.business"
+    },
+    "dmg": {
+      "title": "VIMS Kiosk Client Installer",
+      "icon": "assets/icon.icns"
+    }
+  }
+}
