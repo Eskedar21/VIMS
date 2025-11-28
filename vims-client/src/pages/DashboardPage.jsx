@@ -278,6 +278,7 @@ const DashboardPage = () => {
             sessionStorage.removeItem('vims.inspection.category');
             sessionStorage.removeItem('vims.inspection.registration');
             sessionStorage.removeItem('vims.inspection.checklist');
+            sessionStorage.removeItem('vims.inspection.paymentStatus');
             navigate('/inspection');
           }}
           className="px-5 py-2.5 rounded-lg bg-[#009639] text-white font-semibold hover:bg-[#007c2d] transition flex items-center gap-2"
@@ -524,8 +525,29 @@ const DashboardPage = () => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <button onClick={() => navigate('/result')} className="text-xs text-[#009639] hover:underline font-medium">View</button>
-                      <button className="text-xs text-gray-500 hover:underline">Print</button>
+                      <button 
+                        onClick={() => {
+                          // Store inspection data for result page
+                          window.sessionStorage.setItem('vims.inspection.id', row.id);
+                          window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus);
+                          navigate('/result');
+                        }} 
+                        className="text-xs text-[#009639] hover:underline font-medium"
+                      >
+                        View
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Store inspection ID for result page
+                          window.sessionStorage.setItem('vims.inspection.id', row.id);
+                          window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus);
+                          // Navigate to result page with print flag
+                          navigate('/result?print=true');
+                        }}
+                        className="text-xs text-gray-500 hover:underline"
+                      >
+                        Print
+                      </button>
                     </div>
                   </td>
                 </tr>

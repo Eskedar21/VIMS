@@ -1,38 +1,140 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
-// Print styles for A4 PDF - fits all on one page
+// Print styles for A4 PDF - optimized for certificate and report printing
 const printStyles = `
 @media print {
-  @page { size: A4; margin: 5mm; }
-  html, body { 
+  @page { 
+    size: A4; 
+    margin: 5mm; 
+  }
+  * {
     -webkit-print-color-adjust: exact !important; 
     print-color-adjust: exact !important;
-    background: white !important;
-    font-size: 8px !important;
   }
-  body > div { background: white !important; }
-  .print-hide { display: none !important; }
-  .page-break { page-break-before: auto !important; }
-  .report-page { 
-    width: 100% !important; 
-    min-height: auto !important; 
-    padding: 4mm !important; 
-    margin: 0 0 2mm 0 !important; 
-    box-shadow: none !important; 
+  html, body { 
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  /* Hide all app shell elements */
+  body > div:first-child {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* Hide sidebar completely */
+  aside,
+  aside * {
+    display: none !important;
+  }
+  /* Hide navigation, headers, footers */
+  nav,
+  header,
+  footer,
+  .app-shell-header,
+  .app-shell-footer,
+  .print-hide {
+    display: none !important;
+  }
+  /* Remove left margin from main content (sidebar offset) */
+  [class*="ml-16"],
+  [class*="ml-60"],
+  [class^="ml-"]:not([class*="report-page"]):not([class*="certificate"]) {
+    margin-left: 0 !important;
+  }
+  /* Remove outer container padding but keep report page padding */
+  main > div:not([class*="report-page"]):not([class*="certificate"]) {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  /* Full width for main content area */
+  main,
+  .flex-1,
+  [class*="flex-1"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  /* Container adjustments */
+  div[class*="container"],
+  div[class*="mx-auto"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  /* Report and Certificate pages */
+  .report-page,
+  [class*="certificate"],
+  [class*="report"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 4mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
     border: 1px solid #ddd !important;
     background: white !important;
     page-break-inside: avoid;
     font-size: 9px !important;
   }
-  .report-page h1 { font-size: 12px !important; }
-  .report-page h2 { font-size: 10px !important; }
-  .report-page h3, .report-page h4 { font-size: 9px !important; }
-  .report-page p { font-size: 8px !important; }
-  .report-page .text-2xl, .report-page .text-3xl { font-size: 14px !important; }
-  .report-page .text-lg { font-size: 11px !important; }
-  header, footer, nav, .app-shell-header, .app-shell-footer { display: none !important; }
-  main { padding: 0 !important; margin: 0 !important; }
+  .report-page h1 { 
+    font-size: 12px !important;
+    margin: 0 0 2mm 0 !important;
+  }
+  .report-page h2 { 
+    font-size: 10px !important;
+    margin: 0 0 2mm 0 !important;
+  }
+  .report-page h3,
+  .report-page h4 { 
+    font-size: 9px !important;
+    margin: 0 0 1mm 0 !important;
+  }
+  .report-page p { 
+    font-size: 8px !important;
+    margin: 0 0 1mm 0 !important;
+  }
+  .report-page .text-2xl,
+  .report-page .text-3xl { 
+    font-size: 14px !important;
+  }
+  .report-page .text-lg { 
+    font-size: 11px !important;
+  }
+  .report-page .text-xl { 
+    font-size: 12px !important;
+  }
+  /* Tables */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8px !important;
+    margin: 2mm 0 !important;
+  }
+  th, td {
+    padding: 2mm !important;
+    border: 0.5px solid #ddd !important;
+  }
+  /* Buttons and interactive elements */
+  button,
+  [role="button"],
+  .btn {
+    display: none !important;
+  }
+  /* Ensure proper page breaks */
+  .page-break {
+    page-break-before: always !important;
+  }
+  .no-break {
+    page-break-inside: avoid !important;
+  }
 }
 `;
 
@@ -260,10 +362,19 @@ const TeleBirrModal = ({ onSuccess, onCancel }) => {
 
 // Machine Test Results Data
 const getMachineResults = () => {
+  const titleMap = {
+    alignment: 'Alignment',
+    suspension: 'Suspension',
+    brake: 'Brakes',
+    gas: 'Emissions',
+    smoke: 'Emissions',
+    headlight: 'Headlights',
+  };
+
   if (storedMachine) {
     return Object.entries(storedMachine).map(([key, data]) => ({
       id: key,
-      title: key.charAt(0).toUpperCase() + key.slice(1),
+      title: titleMap[key] || key.charAt(0).toUpperCase() + key.slice(1),
       result: data.sectionResult || 'PASS',
       fields: data.fields || {},
     }));
@@ -272,13 +383,14 @@ const getMachineResults = () => {
     { id: 'alignment', title: 'Alignment', result: 'PASS', fields: { deviation: { value: 2.1, result: 'PASS' } } },
     { id: 'suspension', title: 'Suspension', result: 'PASS', fields: { left: { value: 58, result: 'PASS' }, right: { value: 54, result: 'PASS' } } },
     { id: 'brake', title: 'Brakes', result: 'PASS', fields: { efficiency: { value: 62, result: 'PASS' } } },
-    { id: 'emissions', title: 'Emissions', result: 'PASS', fields: { hc: { value: 180, result: 'PASS' } } },
+    { id: 'gas', title: 'Emissions', result: 'PASS', fields: { hc: { value: 180, result: 'PASS' } } },
     { id: 'headlight', title: 'Headlights', result: 'PASS', fields: { intensity: { value: 15200, result: 'PASS' } } },
   ];
 };
 
 const ResultPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const printRef = useRef(null);
 
   useEffect(() => {
@@ -301,11 +413,118 @@ const ResultPage = () => {
   const [showCert, setShowCert] = useState(false);
   const [certNo, setCertNo] = useState('');
 
+  // Check payment status from session storage when component mounts
+  useEffect(() => {
+    const storedPaymentStatus = getSession('vims.inspection.paymentStatus');
+    if (storedPaymentStatus === 'Paid') {
+      const vehicle = getStoredVehicle();
+      const vehicleCategory = vehicle?.category || 'HEAVY';
+      setPaymentDone(true);
+      setPaymentInfo({
+        method: 'TeleBirr',
+        transactionId: `TB${Date.now()}`,
+        amount: FEES[vehicleCategory]?.total || 402.50,
+      });
+      setIsFinalized(true);
+      setReportId(getSession('vims.inspection.id') || generateGUID());
+    }
+  }, []);
+
+  // Auto-open TeleBirr modal for new inspections without payment
+  useEffect(() => {
+    if (paymentDone) return; // Don't open if payment is already done
+    
+    const storedPaymentStatus = getSession('vims.inspection.paymentStatus');
+    const hasInspectionId = getSession('vims.inspection.id');
+    const hasVisualData = getStoredVisual();
+    const hasMachineData = getStoredMachine();
+    
+    // Auto-open for new inspections (has inspection data) or pending payment status
+    if (hasInspectionId && (hasVisualData || hasMachineData) && storedPaymentStatus !== 'Paid') {
+      const timer = setTimeout(() => setShowPayment(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentDone]);
+
+  // Auto-show report and print if print parameter is present
+  useEffect(() => {
+    if (searchParams.get('print') === 'true') {
+      // Mark as finalized and show report
+      setIsFinalized(true);
+      const storedPaymentStatus = getSession('vims.inspection.paymentStatus');
+      if (storedPaymentStatus === 'Paid') {
+        const vehicle = getStoredVehicle();
+        const vehicleCategory = vehicle?.category || 'HEAVY';
+        setPaymentDone(true);
+        setPaymentInfo({
+          method: 'TeleBirr',
+          transactionId: `TB${Date.now()}`,
+          amount: FEES[vehicleCategory]?.total || 402.50,
+        });
+      }
+      setReportId(getSession('vims.inspection.id') || generateGUID());
+      setShowReport(true);
+      
+      // Trigger print after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        window.print();
+        // Remove print parameter from URL after printing
+        navigate('/result', { replace: true });
+      }, 500);
+    }
+  }, [searchParams, navigate]);
+
   const machineResults = useMemo(() => getMachineResults(), []);
   const visualData = getStoredVisual() || { earnedPoints: 95, totalPoints: 100 };
   
+  // Calculate visual inspection zones from stored checklist
+  const calculateVisualZones = useMemo(() => {
+    if (!visualData?.checklist) {
+      // Default zones if no checklist data
+      return [
+        { zone: 'Identification', items: 4, passed: 4 },
+        { zone: 'Lighting', items: 7, passed: 7 },
+        { zone: 'Steering & Suspension', items: 6, passed: 6 },
+        { zone: 'Body & Interior', items: 8, passed: 8 },
+        { zone: 'Safety Equipment', items: 5, passed: 5 },
+      ];
+    }
+
+    const checklist = visualData.checklist;
+    const category = visualData.category || VEHICLE.category || 'LIGHT';
+    
+    // Zone definitions (matching InspectionPage structure)
+    const zoneDefinitions = category === 'HEAVY' ? [
+      { id: 'zone1', name: 'Identification', itemIds: [1, 2, 3, 4] },
+      { id: 'zone2', name: 'Lighting', itemIds: [5, 6, 7, 8, 9, 10, 11] },
+      { id: 'zone3', name: 'Steering & Suspension', itemIds: [12, 13, 14, 15, 16, 17] },
+      { id: 'zone4', name: 'Body & Interior', itemIds: [18, 19, 20, 21, 22, 23, 24, 25] },
+      { id: 'zone5', name: 'Safety Equipment', itemIds: [26, 27, 28, 29, 30] },
+    ] : [
+      { id: 'zone1', name: 'Identification', itemIds: [1, 2, 3, 4] },
+      { id: 'zone2', name: 'Lighting', itemIds: [5, 6, 7, 8, 9, 10, 11] },
+      { id: 'zone3', name: 'Steering & Suspension', itemIds: [12, 13, 14, 15, 16, 17] },
+      { id: 'zone4', name: 'Body & Interior', itemIds: [18, 19, 20, 21, 22, 23, 24, 25] },
+      { id: 'zone5', name: 'Safety Equipment', itemIds: [26, 27, 28, 29, 30] },
+    ];
+
+    return zoneDefinitions.map(zone => {
+      const zoneItems = zone.itemIds;
+      const passed = zoneItems.filter(id => checklist[id]?.status === 'PASS').length;
+      return {
+        zone: zone.name,
+        items: zoneItems.length,
+        passed: passed,
+      };
+    });
+  }, [visualData]);
+
   const machinePass = machineResults.every(r => r.result === 'PASS');
-  const visualPass = true; // Simplified
+  const visualPass = useMemo(() => {
+    if (!visualData || !visualData.totalPoints) return true;
+    const percentage = (visualData.earnedPoints / visualData.totalPoints) * 100;
+    return percentage >= 80; // Pass if 80% or more
+  }, [visualData]);
   const overallResult = machinePass && visualPass ? 'PASS' : 'FAIL';
 
   const inspectionDate = new Date().toLocaleDateString('en-GB');
@@ -680,7 +899,7 @@ const ResultPage = () => {
         </div>
 
         {/* PAGE 2: Visual Inspection - Heavy/Regular Vehicle Form Style */}
-        <div className={`report-page border rounded-lg shadow-lg mx-auto p-6 ${VEHICLE.category === 'HEAVY' ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-300'}`} style={{ maxWidth: '210mm', fontSize: '10px' }}>
+        <div className={`report-page border rounded-lg shadow-lg mx-auto p-6 bg-white ${VEHICLE.category === 'HEAVY' ? 'border-amber-300' : 'border-gray-300'}`} style={{ maxWidth: '210mm', fontSize: '10px' }}>
           {/* Header - Official Form Style */}
           <div className="border-b-2 border-gray-800 pb-3 mb-3">
             <div className="text-center">
@@ -709,7 +928,7 @@ const ResultPage = () => {
           {/* 30-Point Visual Inspection Table */}
           <table className="w-full border border-gray-500 text-[9px] mb-3">
             <thead>
-              <tr className={`${VEHICLE.category === 'HEAVY' ? 'bg-amber-200' : 'bg-gray-200'}`}>
+              <tr className="bg-gray-200">
                 <th className="border border-gray-400 px-1 py-1 w-6 text-center">ተ.ቁ</th>
                 <th className="border border-gray-400 px-1 py-1 text-left">ዝርዝር መስፈርት / Inspection Criteria</th>
                 <th className="border border-gray-400 px-1 py-1 w-12 text-center">የተሰጠዉ<br/>ነጥብ</th>
@@ -909,15 +1128,27 @@ const ResultPage = () => {
           </div>
 
           {/* Result */}
-          <div className="border-2 border-[#009639] rounded-lg p-6 mb-6 bg-green-50">
+          <div className={`border-2 rounded-lg p-6 mb-6 ${overallResult === 'PASS' ? 'border-[#009639] bg-green-50' : 'border-red-500 bg-red-50'}`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Overall Result:</p>
-                <p className="text-3xl font-bold text-[#009639]">✓ PASSED</p>
+                <p className="text-sm text-gray-600">Overall Result / የጠቅላላ ውጤት:</p>
+                <p className={`text-3xl font-bold ${overallResult === 'PASS' ? 'text-[#009639]' : 'text-red-600'}`}>
+                  {overallResult === 'PASS' ? '✓ PASSED / አልፏል' : '✗ FAILED / አላለፈም'}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">Registration Sticker:</p>
-                <p className="text-3xl font-bold text-[#009639]">{stickerNo}</p>
+                <p className={`text-3xl font-bold ${overallResult === 'PASS' ? 'text-[#009639]' : 'text-red-600'}`}>{stickerNo}</p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">Machine Test:</span>
+                <span className={`ml-2 font-bold ${machinePass ? 'text-green-700' : 'text-red-600'}`}>{machinePass ? 'PASS' : 'FAIL'}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">Visual Test:</span>
+                <span className={`ml-2 font-bold ${visualPass ? 'text-green-700' : 'text-red-600'}`}>{visualPass ? 'PASS' : 'FAIL'}</span>
               </div>
             </div>
           </div>
@@ -1040,13 +1271,7 @@ const ResultPage = () => {
         </div>
         <div className="p-4">
           <div className="grid grid-cols-5 gap-3">
-            {[
-              { zone: 'Identification', items: 4, passed: 4 },
-              { zone: 'Lighting', items: 7, passed: 7 },
-              { zone: 'Steering & Suspension', items: 6, passed: 6 },
-              { zone: 'Body & Interior', items: 8, passed: 8 },
-              { zone: 'Safety Equipment', items: 5, passed: 5 },
-            ].map((zone, i) => (
+            {calculateVisualZones.map((zone, i) => (
               <div key={i} className={`p-3 rounded-lg text-center ${zone.passed === zone.items ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
                 <p className="text-xs text-gray-600 font-medium mb-1">{zone.zone}</p>
                 <p className={`text-lg font-bold ${zone.passed === zone.items ? 'text-green-700' : 'text-red-600'}`}>

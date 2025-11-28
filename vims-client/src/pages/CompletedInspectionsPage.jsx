@@ -2,11 +2,11 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const MOCK_COMPLETED = [
-  { id: 'VIS-2025-0023', dateTime: '2025-11-26 09:45', plate: 'ET 12345A', vehicleType: 'Passenger Car', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0023' },
-  { id: 'VIS-2025-0022', dateTime: '2025-11-26 09:12', plate: 'ET 87923B', vehicleType: 'Mini Bus', technician: 'Sara Tesfaye', result: 'FAIL', certificateNo: null },
-  { id: 'VIS-2025-0021', dateTime: '2025-11-26 08:55', plate: 'ET 29487C', vehicleType: 'Cargo Truck', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0021' },
-  { id: 'VIS-2025-0020', dateTime: '2025-11-25 16:30', plate: 'ET 85216Z', vehicleType: 'Passenger Car', technician: 'Dawit Haile', result: 'PASS', certificateNo: 'CERT-2025-0020' },
-  { id: 'VIS-2025-0019', dateTime: '2025-11-25 15:20', plate: 'ET 44821D', vehicleType: 'Motorcycle', technician: 'Sara Tesfaye', result: 'PASS', certificateNo: 'CERT-2025-0019' },
+  { id: 'VIS-2025-0023', dateTime: '2025-11-26 09:45', plate: 'ET 12345A', vehicleType: 'Passenger Car', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0023', paymentStatus: 'Paid' },
+  { id: 'VIS-2025-0022', dateTime: '2025-11-26 09:12', plate: 'ET 87923B', vehicleType: 'Mini Bus', technician: 'Sara Tesfaye', result: 'FAIL', certificateNo: null, paymentStatus: 'Paid' },
+  { id: 'VIS-2025-0021', dateTime: '2025-11-26 08:55', plate: 'ET 29487C', vehicleType: 'Cargo Truck', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0021', paymentStatus: 'Paid' },
+  { id: 'VIS-2025-0020', dateTime: '2025-11-25 16:30', plate: 'ET 85216Z', vehicleType: 'Passenger Car', technician: 'Dawit Haile', result: 'PASS', certificateNo: 'CERT-2025-0020', paymentStatus: 'Paid' },
+  { id: 'VIS-2025-0019', dateTime: '2025-11-25 15:20', plate: 'ET 44821D', vehicleType: 'Motorcycle', technician: 'Sara Tesfaye', result: 'PASS', certificateNo: 'CERT-2025-0019', paymentStatus: 'Paid' },
 ];
 
 const CompletedInspectionsPage = () => {
@@ -70,8 +70,29 @@ const CompletedInspectionsPage = () => {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/result')} className="text-xs text-[#009639] hover:underline font-medium">View</button>
-                    <button className="text-xs text-gray-500 hover:underline">Print</button>
+                    <button 
+                      onClick={() => {
+                        // Store inspection data for result page
+                        window.sessionStorage.setItem('vims.inspection.id', row.id);
+                        window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus || 'Paid');
+                        navigate('/result');
+                      }} 
+                      className="text-xs text-[#009639] hover:underline font-medium"
+                    >
+                      View
+                    </button>
+                    <button 
+                      onClick={() => {
+                        // Store inspection ID for result page
+                        window.sessionStorage.setItem('vims.inspection.id', row.id);
+                        window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus || 'Paid');
+                        // Navigate to result page with print flag
+                        navigate('/result?print=true');
+                      }}
+                      className="text-xs text-gray-500 hover:underline"
+                    >
+                      Print
+                    </button>
                   </div>
                 </td>
               </tr>

@@ -272,7 +272,11 @@ const VehicleInfoBar = () => {
 
 const MachineTestPage = () => {
   const navigate = useNavigate();
-  const isDiesel = (VEHICLE_PROFILE.fuelType || '').toLowerCase() === 'diesel';
+  
+  // Read fuel type dynamically from session storage
+  const currentVehicle = getStoredVehicle();
+  const fuelType = currentVehicle?.fuelType || VEHICLE_PROFILE.fuelType || 'Petrol';
+  const isDiesel = fuelType.toLowerCase() === 'diesel';
   const emissionSectionKey = isDiesel ? 'smoke' : 'gas';
 
   const orderedSections = useMemo(() => ['alignment', 'suspension', 'brake', emissionSectionKey, 'headlight'], [emissionSectionKey]);
@@ -364,7 +368,7 @@ const MachineTestPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Machine Test Station</h1>
-          <p className="text-sm text-gray-500">Automated equipment data capture • {VEHICLE_PROFILE.fuelType} vehicle</p>
+          <p className="text-sm text-gray-500">Automated equipment data capture • {fuelType} vehicle</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
@@ -471,9 +475,10 @@ const MachineTestPage = () => {
                       <button
                         onClick={() => handleRetest(sectionKey)}
                         disabled={anyReceiving}
-                        className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1"
+                        className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
                       >
-                        {Icons.refresh} Re-test
+                        <span className="flex-shrink-0">{Icons.refresh}</span>
+                        <span>Re-test</span>
                       </button>
                     </div>
                   </div>

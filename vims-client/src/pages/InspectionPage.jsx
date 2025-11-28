@@ -336,9 +336,12 @@ const VehicleInfoBar = ({ registration, testStartTime }) => {
   );
 };
 
-const FormInput = ({ label, error, children }) => (
+const FormInput = ({ label, error, children, required = true }) => (
   <div className="space-y-1.5">
-    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
+    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+      {label}
+      {required && <span className="text-red-500 ml-1">*</span>}
+    </label>
     {children}
     {error && (
       <p className="text-xs text-red-500 flex items-center gap-1">
@@ -556,13 +559,20 @@ const InspectionPage = () => {
 
   const validateRegistration = () => {
     const errors = {};
-    if (!/^[A-Z]{2}\s?\d{4,5}[A-Z]?$/.test(registration.plateNumber.trim())) {
+    // Updated regex to accept dashes: AA-12345 or AA12345
+    if (!/^[A-Z]{2}-?\d{4,5}[A-Z]?$/.test(registration.plateNumber.trim())) {
       errors.plateNumber = 'Format: AA-12345';
     }
+    if (!registration.ownerName.trim()) errors.ownerName = 'Required';
     if (!registration.chassisNumber.trim()) errors.chassisNumber = 'Required';
     if (!registration.engineNumber.trim()) errors.engineNumber = 'Required';
     if (!registration.vehicleType) errors.vehicleType = 'Required';
     if (!registration.brandModel.trim()) errors.brandModel = 'Required';
+    if (!registration.kilometerReading || registration.kilometerReading.trim() === '') {
+      errors.kilometerReading = 'Required';
+    } else if (Number(registration.kilometerReading) < 0) {
+      errors.kilometerReading = 'Must be 0 or greater';
+    }
     if (!registration.titleCertificate.trim()) errors.titleCertificate = 'Required';
     if (!registration.licensedCapacity) {
       errors.licensedCapacity = 'Required';
@@ -639,6 +649,8 @@ const InspectionPage = () => {
         formId: categoryConfig?.formId,
         testStartTime: startTime,
       }));
+      // Set payment status to Pending for new inspections (payment will be requested)
+      window.sessionStorage.setItem('vims.inspection.paymentStatus', 'Pending');
       setIsSavingRegistration(false);
       setActiveTab('visual');
     }, 600);
@@ -878,7 +890,11 @@ const InspectionPage = () => {
                 <input type="text" value={registration.ownerName} onChange={(e) => handleRegistrationChange('ownerName', e.target.value)} placeholder="Full name" className={inputClass} />
               </FormInput>
               <FormInput label="Plate Number" error={regErrors.plateNumber}>
-                <input type="text" value={registration.plateNumber} onChange={(e) => handleRegistrationChange('plateNumber', e.target.value.toUpperCase())} placeholder="AA-12345" className={inputClass} />
+                <input type="text" value={registration.plateNumber} onChange={(e) => {
+                  // Allow letters, numbers, and dashes, convert to uppercase
+                  const value = e.target.value.replace(/[^A-Za-z0-9-]/g, '').toUpperCase();
+                  handleRegistrationChange('plateNumber', value);
+                }} placeholder="AA-12345" className={inputClass} />
               </FormInput>
               <FormInput label="Chassis Number" error={regErrors.chassisNumber}>
                 <input type="text" value={registration.chassisNumber} onChange={(e) => handleRegistrationChange('chassisNumber', e.target.value)} placeholder="VIN / Chassis" className={`${inputClass} font-mono uppercase tracking-wider`} />
@@ -904,7 +920,7 @@ const InspectionPage = () => {
               <FormInput label={vehicleCategory === 'HEAVY' ? 'Licensed Capacity (Seat / KG)' : 'Licensed Capacity (Seats)'} error={regErrors.licensedCapacity}>
                 <input type="number" min="1" value={registration.licensedCapacity} onChange={(e) => handleRegistrationChange('licensedCapacity', e.target.value)} placeholder="Enter capacity" className={inputClass} />
               </FormInput>
-              <FormInput label="Fuel Type">
+              <FormInput label="Fuel Type" required={false}>
                 <select value={registration.fuelType} onChange={(e) => handleRegistrationChange('fuelType', e.target.value)} className={inputClass}>
                   <option value="Petrol">Petrol</option>
                   <option value="Diesel">Diesel</option>
@@ -914,8 +930,7 @@ const InspectionPage = () => {
               </FormInput>
             </div>
           </div>
-          <div className={`px-6 py-4 border-t flex items-center justify-between ${vehicleCategory === 'HEAVY' ? 'bg-amber-50/50 border-amber-100' : 'bg-gray-50/50 border-gray-100'}`}>
-            <p className="text-xs text-gray-500">All fields are required</p>
+          <div className={`px-6 py-4 border-t flex items-center justify-end ${vehicleCategory === 'HEAVY' ? 'bg-amber-50/50 border-amber-100' : 'bg-gray-50/50 border-gray-100'}`}>
             <button type="button" onClick={handleRegistrationSave} disabled={isSavingRegistration} className="px-6 py-2.5 rounded-lg bg-[#009639] text-white text-sm font-semibold hover:bg-[#007c2d] disabled:opacity-60 transition flex items-center gap-2">
               {isSavingRegistration ? 'Saving...' : 'Save & Continue'}
               <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>

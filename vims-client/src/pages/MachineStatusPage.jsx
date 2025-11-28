@@ -162,6 +162,7 @@ const MachineStatusPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [selectedMachine, setSelectedMachine] = useState(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   const refreshStatus = () => {
     setIsRefreshing(true);
@@ -170,6 +171,29 @@ const MachineStatusPage = () => {
       setLastRefresh(new Date());
       setIsRefreshing(false);
     }, 1000);
+  };
+
+  const handleReconnect = (machineId) => {
+    setIsReconnecting(true);
+    // Simulate reconnection attempt
+    setTimeout(() => {
+      setMachines(prevMachines => {
+        const updatedMachines = prevMachines.map(m => 
+          m.id === machineId 
+            ? { ...m, status: 'online', uptime: 95 + Math.floor(Math.random() * 5), lastPing: new Date().toISOString(), responseTime: Math.floor(Math.random() * 50) + 10 }
+            : m
+        );
+        // Update selected machine if it's the one being reconnected
+        if (selectedMachine && selectedMachine.id === machineId) {
+          const updatedMachine = updatedMachines.find(m => m.id === machineId);
+          if (updatedMachine) {
+            setSelectedMachine(updatedMachine);
+          }
+        }
+        return updatedMachines;
+      });
+      setIsReconnecting(false);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -413,19 +437,18 @@ const MachineStatusPage = () => {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-2">
-                {selectedMachine.status === 'offline' && (
-                  <button className="flex-1 px-4 py-2.5 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 flex items-center justify-center gap-2">
-                    {Icon.refresh} Reconnect
+              {selectedMachine.status === 'offline' && (
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={() => handleReconnect(selectedMachine.id)}
+                    disabled={isReconnecting}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <span className={isReconnecting ? 'animate-spin' : ''}>{Icon.refresh}</span>
+                    {isReconnecting ? 'Reconnecting...' : 'Reconnect'}
                   </button>
-                )}
-                <button className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
-                  {Icon.settings} Configure
-                </button>
-                <button className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 flex items-center justify-center gap-2">
-                  {Icon.maintenance} Maintenance
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
