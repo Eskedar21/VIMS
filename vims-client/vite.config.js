@@ -5,15 +5,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   
-  // *** CRITICAL FIX FOR ELECTRON BLANK SCREEN ISSUE ***
-  // Sets the base path to relative ('./') instead of absolute ('/')
-  // This ensures that assets (JS/CSS/images) load correctly when the
-  // index.html file is loaded via the file:// protocol in production.
-  base: './',
+  // Use relative base for Electron, absolute for web deployment
+  // Vercel will use '/' automatically, Electron needs './'
+  base: process.env.VERCEL ? '/' : './',
 
   build: {
     outDir: 'dist',
-    assetsDir: '.', // <-- critical for Electron
+    assetsDir: process.env.VERCEL ? 'assets' : '.', // Use assets folder for web, root for Electron
     chunkSizeWarningLimit: 1500,
   }
 });

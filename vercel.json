@@ -1,0 +1,14 @@
+{
+  "buildCommand": "cd vims-client && npm install && npm run build",
+  "outputDirectory": "vims-client/dist",
+  "devCommand": "cd vims-client && npm run vite:dev",
+  "installCommand": "cd vims-client && npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+
