@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { saveInspectionPhotos, getPhotosByInspectionId } from '../utils/photoStorage';
 
 // Vehicle Category Configuration (US-038)
 const VEHICLE_CATEGORIES = {
@@ -481,6 +482,14 @@ const InspectionPage = () => {
   const [defectModal, setDefectModal] = useState(null);
   const [selectedDefect, setSelectedDefect] = useState('');
   const [testStartTime, setTestStartTime] = useState('');
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraError, setCameraError] = useState('');
+  const [registrationPhoto, setRegistrationPhoto] = useState(null);
+  const [inspectionPhotos, setInspectionPhotos] = useState([]);
+  const [isInspectionCapturing, setIsInspectionCapturing] = useState(false);
+  const inspectionIntervalRef = useRef(null);
 
   // Get current category config and zones
   const categoryConfig = vehicleCategory ? VEHICLE_CATEGORIES[vehicleCategory] : null;
@@ -508,6 +517,25 @@ const InspectionPage = () => {
       window.sessionStorage.setItem('vims.inspection.category', vehicleCategory);
     }
   }, [vehicleCategory]);
+
+  const stopCameraStream = () => {
+    cameraStream?.getTracks()?.forEach((t) => t.stop());
+    setCameraStream(null);
+  };
+
+  const stopInspectionInterval = () => {
+    if (inspectionIntervalRef.current) {
+      clearInterval(inspectionIntervalRef.current);
+      inspectionIntervalRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopInspectionInterval();
+      stopCameraStream();
+    };
+  }, []);
 
   const formattedInspectionId = useMemo(() => inspectionId || '— Pending —', [inspectionId]);
 
@@ -656,6 +684,253 @@ const InspectionPage = () => {
     }, 600);
   };
 
+  const ensureCameraStream = async () => {
+    if (cameraStream) return cameraStream;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // Wait for video to start playing
+        await new Promise((resolve, reject) => {
+          if (videoRef.current) {
+            const onPlaying = () => {
+              videoRef.current.removeEventListener('playing', onPlaying);
+              resolve();
+            };
+            videoRef.current.addEventListener('playing', onPlaying);
+            videoRef.current.play().catch(reject);
+            // Fallback timeout
+            setTimeout(() => {
+              videoRef.current?.removeEventListener('playing', onPlaying);
+              resolve();
+            }, 3000);
+          } else {
+            resolve();
+          }
+        });
+      }
+      setCameraStream(stream);
+      setCameraError('');
+      return stream;
+    } catch (err) {
+      setCameraError('Unable to access camera. Please check permissions or device.');
+      console.error('Camera error:', err);
+      return null;
+    }
+  };
+
+  const getCoordinates = () =>
+    new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
+
+  const capturePhotoWithMetadata = async (purpose) => {
+    const stream = await ensureCameraStream();
+    if (!stream || !videoRef.current || !canvasRef.current) {
+      console.error('Missing stream, video, or canvas', { stream: !!stream, video: !!videoRef.current, canvas: !!canvasRef.current });
+      return null;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    // Ensure video is playing
+    if (video.paused) {
+      try {
+        await video.play();
+      } catch (err) {
+        console.error('Error playing video:', err);
+      }
+    }
+
+    // Wait for video to be ready and have valid dimensions (simpler check like machine test)
+    await new Promise((resolve) => {
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+        resolve();
+      } else {
+        const checkReady = () => {
+          if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+            video.removeEventListener('loadedmetadata', checkReady);
+            video.removeEventListener('loadeddata', checkReady);
+            video.removeEventListener('playing', checkReady);
+            resolve();
+          }
+        };
+        video.addEventListener('loadedmetadata', checkReady);
+        video.addEventListener('loadeddata', checkReady);
+        video.addEventListener('playing', checkReady);
+        // Fallback timeout
+        setTimeout(() => {
+          video.removeEventListener('loadedmetadata', checkReady);
+          video.removeEventListener('loadeddata', checkReady);
+          video.removeEventListener('playing', checkReady);
+          resolve();
+        }, 2000);
+      }
+    });
+
+    // Additional delay to ensure frame is ready (matching machine test timing)
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    
+    if (width === 0 || height === 0) {
+      console.error('Video dimensions are invalid', { width, height, readyState: video.readyState, paused: video.paused });
+      return null;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
+    
+    // Draw video frame directly (like machine test - don't clear with black first)
+    try {
+      ctx.drawImage(video, 0, 0, width, height);
+    } catch (err) {
+      console.error('Error drawing video to canvas:', err);
+      return null;
+    }
+
+    const timestamp = new Date();
+    const coords = await getCoordinates();
+    const overlayText = `${timestamp.toISOString()}${coords ? ` | ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : ' | No GPS'}`;
+    
+    // Draw overlay background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    const textWidth = ctx.measureText(overlayText).width;
+    ctx.fillRect(10, height - 40, textWidth + 20, 30);
+    
+    // Draw overlay text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(overlayText, 20, height - 20);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    
+    return {
+      id: `${purpose}-${Date.now()}`,
+      purpose,
+      timestamp: timestamp.toISOString(),
+      coords,
+      dataUrl,
+    };
+  };
+
+  const handleRegistrationPhotoCapture = async () => {
+    const photo = await capturePhotoWithMetadata('registration');
+    if (photo) {
+      setRegistrationPhoto(photo);
+      // Save photo immediately if we have inspection ID and vehicle data
+      if (inspectionId) {
+        const vehicleData = JSON.parse(window.sessionStorage.getItem('vims.inspection.vehicle') || '{}');
+        if (vehicleData.plateNumber) {
+          const existing = getPhotosByInspectionId(inspectionId);
+          saveInspectionPhotos(inspectionId, vehicleData, {
+            registration: photo,
+            inspection: existing?.photos?.inspection || [],
+            machineTest: existing?.photos?.machineTest || [],
+          });
+        }
+      }
+    }
+  };
+
+  const MAX_INSPECTION_PHOTOS = 7;
+
+  const captureInspectionFrame = async () => {
+    const photo = await capturePhotoWithMetadata('inspection');
+    if (!photo) return;
+    setInspectionPhotos((prev) => {
+      const next = [...prev, photo].slice(-MAX_INSPECTION_PHOTOS);
+      if (next.length >= MAX_INSPECTION_PHOTOS) {
+        stopInspectionInterval();
+        setIsInspectionCapturing(false);
+      }
+      return next;
+    });
+  };
+
+  const startInspectionCapture = async () => {
+    if (isInspectionCapturing) return;
+    
+    // Ensure camera is started first
+    const stream = await ensureCameraStream();
+    if (!stream) {
+      setCameraError('Please start camera first');
+      return;
+    }
+    
+    // Wait for video to be playing and ready
+    if (videoRef.current) {
+      await new Promise((resolve) => {
+        const checkReady = () => {
+          if (videoRef.current && 
+              videoRef.current.readyState >= 2 && 
+              videoRef.current.videoWidth > 0 && 
+              videoRef.current.videoHeight > 0 &&
+              !videoRef.current.paused) {
+            videoRef.current.removeEventListener('loadedmetadata', checkReady);
+            videoRef.current.removeEventListener('playing', checkReady);
+            videoRef.current.removeEventListener('canplay', checkReady);
+            resolve();
+          }
+        };
+        
+        if (videoRef.current.readyState >= 2 && 
+            videoRef.current.videoWidth > 0 && 
+            videoRef.current.videoHeight > 0 &&
+            !videoRef.current.paused) {
+          resolve();
+        } else {
+          videoRef.current.addEventListener('loadedmetadata', checkReady);
+          videoRef.current.addEventListener('playing', checkReady);
+          videoRef.current.addEventListener('canplay', checkReady);
+          // Ensure video is playing
+          if (videoRef.current.paused) {
+            videoRef.current.play().catch(console.error);
+          }
+          setTimeout(() => {
+            videoRef.current?.removeEventListener('loadedmetadata', checkReady);
+            videoRef.current?.removeEventListener('playing', checkReady);
+            videoRef.current?.removeEventListener('canplay', checkReady);
+            resolve();
+          }, 3000);
+        }
+      });
+      
+      // Additional delay to ensure frames are rendering
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    setInspectionPhotos([]);
+    setIsInspectionCapturing(true);
+    await captureInspectionFrame();
+    inspectionIntervalRef.current = setInterval(() => {
+      captureInspectionFrame();
+    }, 5000);
+  };
+
+  const stopInspectionCapture = () => {
+    stopInspectionInterval();
+    setIsInspectionCapturing(false);
+  };
+
   const handleItemStatus = (itemId, status) => {
     if (status === 'FAIL') {
       setDefectModal({ itemId });
@@ -704,6 +979,26 @@ const InspectionPage = () => {
       totalPoints,
       category: vehicleCategory,
     }));
+    
+    // Save photos to persistent storage
+    const vehicleData = JSON.parse(window.sessionStorage.getItem('vims.inspection.vehicle') || '{}');
+    if (inspectionId && vehicleData.plateNumber) {
+      // Get existing photos to preserve registration and any machine test photos
+      const existing = getPhotosByInspectionId(inspectionId);
+      const photosToSave = {
+        registration: registrationPhoto || existing?.photos?.registration || null,
+        inspection: inspectionPhotos.length > 0 ? inspectionPhotos : (existing?.photos?.inspection || []),
+        machineTest: existing?.photos?.machineTest || [],
+      };
+      console.log('Saving visual inspection photos:', {
+        inspectionId,
+        registration: !!photosToSave.registration,
+        inspectionCount: photosToSave.inspection.length,
+        machineTestCount: photosToSave.machineTest.length
+      });
+      saveInspectionPhotos(inspectionId, vehicleData, photosToSave);
+    }
+    
     setTimeout(() => {
       setIsSavingVisual(false);
       navigate('/machine-test');
@@ -929,6 +1224,94 @@ const InspectionPage = () => {
                 </select>
               </FormInput>
             </div>
+
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Capture Vehicle Photo</p>
+                  <p className="text-xs text-gray-500">Required at registration. Photos include timestamp and coordinates.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={ensureCameraStream}
+                    className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  >
+                    {cameraStream ? 'Camera Ready' : 'Start Camera'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRegistrationPhotoCapture}
+                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#009639] text-white hover:bg-[#007c2d]"
+                  >
+                    Capture Photo
+                  </button>
+                </div>
+              </div>
+              {cameraError && <p className="text-xs text-red-600 mb-2">{cameraError}</p>}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                </div>
+                <div className="border rounded-lg p-3 bg-gray-50">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">Captured Photo</p>
+                  {registrationPhoto ? (
+                    <div className="space-y-3">
+                      <img src={registrationPhoto.dataUrl} alt="Registration capture" className="w-full rounded-md border" />
+                      <div className="space-y-2 border-t pt-2">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                              <circle cx="12" cy="12" r="10" />
+                              <path d="M12 6v6l4 2" />
+                            </svg>
+                            <span className="text-xs font-semibold text-gray-700">Timestamp:</span>
+                          </div>
+                          <p className="text-xs text-gray-600 pl-6">
+                            {new Date(registrationPhoto.timestamp).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                        {registrationPhoto.coords ? (
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                <circle cx="12" cy="10" r="3" />
+                              </svg>
+                              <span className="text-xs font-semibold text-gray-700">Coordinates:</span>
+                            </div>
+                            <div className="pl-6 space-y-0.5">
+                              <p className="text-xs text-gray-600 font-mono">
+                                Lat: {registrationPhoto.coords.lat.toFixed(6)}
+                              </p>
+                              <p className="text-xs text-gray-600 font-mono">
+                                Lng: {registrationPhoto.coords.lng.toFixed(6)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-xs text-amber-600">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                            </svg>
+                            <span>GPS not available</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500">No photo captured yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
           <div className={`px-6 py-4 border-t flex items-center justify-end ${vehicleCategory === 'HEAVY' ? 'bg-amber-50/50 border-amber-100' : 'bg-gray-50/50 border-gray-100'}`}>
             <button type="button" onClick={handleRegistrationSave} disabled={isSavingRegistration} className="px-6 py-2.5 rounded-lg bg-[#009639] text-white text-sm font-semibold hover:bg-[#007c2d] disabled:opacity-60 transition flex items-center gap-2">
@@ -942,6 +1325,238 @@ const InspectionPage = () => {
       {/* 30-Point Visual Inspection */}
       {activeTab === 'visual' && (
         <div className="space-y-4">
+          {/* Photo Capture Controls */}
+          <div className="bg-white border rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Live Inspection Photos</p>
+                <p className="text-xs text-gray-500">Automatically capture up to 7 photos every 5s with GPS and timestamp overlay.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={ensureCameraStream}
+                  disabled={isInspectionCapturing}
+                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+                >
+                  {cameraStream ? '✓ Camera Ready' : 'Start Camera'}
+                </button>
+                <button
+                  type="button"
+                  onClick={startInspectionCapture}
+                  disabled={isInspectionCapturing || !cameraStream}
+                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#009639] text-white hover:bg-[#007c2d] disabled:opacity-60"
+                >
+                  {isInspectionCapturing ? 'Capturing…' : 'Start Capture'}
+                </button>
+                <button
+                  type="button"
+                  onClick={stopInspectionCapture}
+                  disabled={!isInspectionCapturing}
+                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+                >
+                  Stop
+                </button>
+              </div>
+            </div>
+            {cameraError && <p className="text-xs text-red-600">{cameraError}</p>}
+            {!cameraStream && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs text-amber-800">
+                  <strong>Step 1:</strong> Click "Start Camera" to initialize the camera feed.
+                </p>
+              </div>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                {!cameraStream && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                    <div className="text-center text-white">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mx-auto mb-2 opacity-50">
+                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      <p className="text-sm">Camera not started</p>
+                      <p className="text-xs opacity-75 mt-1">Click "Start Camera" to begin</p>
+                    </div>
+                  </div>
+                )}
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {inspectionPhotos.length === 0 && (
+                  <p className="text-xs text-gray-500">No inspection photos yet. Start capture to begin.</p>
+                )}
+                {inspectionPhotos.map((photo, idx) => {
+                  const date = new Date(photo.timestamp);
+                  const formattedDate = date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  });
+                  return (
+                    <div key={photo.id} className="border rounded-lg p-2 bg-gray-50">
+                      <div className="flex items-start gap-3">
+                        <img src={photo.dataUrl} alt={`Inspection ${idx + 1}`} className="w-24 h-24 object-cover rounded-md border flex-shrink-0" />
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-500">Photo #{idx + 1}</span>
+                            <span className="text-xs text-gray-400">•</span>
+                            <span className="text-xs text-gray-600">{formattedDate}</span>
+                          </div>
+                          {photo.coords ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                  <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                <span className="text-xs font-semibold text-gray-700">Coordinates:</span>
+                              </div>
+                              <div className="pl-5 space-y-0.5">
+                                <p className="text-xs text-gray-600 font-mono">
+                                  Lat: {photo.coords.lat.toFixed(6)}
+                                </p>
+                                <p className="text-xs text-gray-600 font-mono">
+                                  Lng: {photo.coords.lng.toFixed(6)}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs text-amber-600">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                              </svg>
+                              <span>GPS not available</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* All Captured Photos Gallery - Prominent Display */}
+          {(inspectionPhotos.length > 0 || registrationPhoto) && (
+            <div className="bg-white border-2 border-[#009639] rounded-xl p-5 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#009639]/10 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#009639]">
+                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">All Captured Photos</h3>
+                    <p className="text-xs text-gray-500">
+                      {registrationPhoto ? '1 registration photo' : ''}
+                      {registrationPhoto && inspectionPhotos.length > 0 ? ' + ' : ''}
+                      {inspectionPhotos.length > 0 ? `${inspectionPhotos.length} inspection photos` : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-3 py-1.5 bg-[#009639]/10 rounded-lg">
+                  <span className="text-sm font-bold text-[#009639]">
+                    {1 + inspectionPhotos.length} Total
+                  </span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Registration Photo */}
+                {registrationPhoto && (
+                  <div className="border-2 border-blue-200 rounded-lg p-3 bg-blue-50/50">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-700">Registration Photo</span>
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded">#1</span>
+                    </div>
+                    <img src={registrationPhoto.dataUrl} alt="Registration" className="w-full h-48 object-cover rounded-md border-2 border-blue-200 mb-2" />
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 6v6l4 2" />
+                        </svg>
+                        <span className="font-semibold text-gray-700">Time:</span>
+                        <span className="text-gray-600">
+                          {new Date(registrationPhoto.timestamp).toLocaleString('en-US', {
+                            month: 'short',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      {registrationPhoto.coords ? (
+                        <div className="space-y-0.5 pl-4">
+                          <p className="text-gray-600 font-mono text-[10px]">
+                            Lat: {registrationPhoto.coords.lat.toFixed(6)}
+                          </p>
+                          <p className="text-gray-600 font-mono text-[10px]">
+                            Lng: {registrationPhoto.coords.lng.toFixed(6)}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-amber-600 text-[10px] pl-4">GPS not available</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Inspection Photos */}
+                {inspectionPhotos.map((photo, idx) => {
+                  const date = new Date(photo.timestamp);
+                  const formattedDate = date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  });
+                  return (
+                    <div key={photo.id} className="border-2 border-green-200 rounded-lg p-3 bg-green-50/50">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-bold text-green-700">Inspection Photo</span>
+                        <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded">#{idx + 1}</span>
+                      </div>
+                      <img src={photo.dataUrl} alt={`Inspection ${idx + 1}`} className="w-full h-48 object-cover rounded-md border-2 border-green-200 mb-2" />
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v6l4 2" />
+                          </svg>
+                          <span className="font-semibold text-gray-700">Time:</span>
+                          <span className="text-gray-600">{formattedDate}</span>
+                        </div>
+                        {photo.coords ? (
+                          <div className="space-y-0.5 pl-4">
+                            <p className="text-gray-600 font-mono text-[10px]">
+                              Lat: {photo.coords.lat.toFixed(6)}
+                            </p>
+                            <p className="text-gray-600 font-mono text-[10px]">
+                              Lng: {photo.coords.lng.toFixed(6)}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-amber-600 text-[10px] pl-4">GPS not available</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Vehicle Info Header Bar */}
           <VehicleInfoBar registration={registration} testStartTime={testStartTime} />
 
@@ -1170,6 +1785,7 @@ const InspectionPage = () => {
           </div>
         </div>
       )}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 };

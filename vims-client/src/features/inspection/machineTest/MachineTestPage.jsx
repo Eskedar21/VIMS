@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { saveInspectionPhotos, getPhotosByInspectionId } from '../../../utils/photoStorage';
 
 // Flat SVG Icons
 const Icons = {
@@ -288,6 +289,14 @@ const MachineTestPage = () => {
   });
 
   const [activeSection, setActiveSection] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const captureIntervalRef = useRef(null);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraError, setCameraError] = useState('');
+  const [machinePhotos, setMachinePhotos] = useState([]);
+  const [isMachineCapturing, setIsMachineCapturing] = useState(false);
+  const MAX_MACHINE_PHOTOS = 7;
 
   useEffect(() => {
     setSections((prev) => {
@@ -300,6 +309,209 @@ const MachineTestPage = () => {
   const anyReceiving = useMemo(() => orderedSections.some((key) => sections[key]?.status === SECTION_STATUS.RECEIVING), [orderedSections, sections]);
   const allComplete = useMemo(() => orderedSections.every((key) => sections[key]?.status === SECTION_STATUS.COMPLETE), [orderedSections, sections]);
   const completedCount = useMemo(() => orderedSections.filter((key) => sections[key]?.status === SECTION_STATUS.COMPLETE).length, [orderedSections, sections]);
+
+  const stopCameraStream = () => {
+    cameraStream?.getTracks()?.forEach((t) => t.stop());
+    setCameraStream(null);
+  };
+
+  const stopMachineInterval = () => {
+    if (captureIntervalRef.current) {
+      clearInterval(captureIntervalRef.current);
+      captureIntervalRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopMachineInterval();
+      stopCameraStream();
+    };
+  }, []);
+
+  const ensureCameraStream = async () => {
+    if (cameraStream) return cameraStream;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // Wait for video to start playing
+        await new Promise((resolve, reject) => {
+          if (videoRef.current) {
+            const onPlaying = () => {
+              videoRef.current.removeEventListener('playing', onPlaying);
+              resolve();
+            };
+            videoRef.current.addEventListener('playing', onPlaying);
+            videoRef.current.play().catch(reject);
+            // Fallback timeout
+            setTimeout(() => {
+              videoRef.current?.removeEventListener('playing', onPlaying);
+              resolve();
+            }, 3000);
+          } else {
+            resolve();
+          }
+        });
+      }
+      setCameraStream(stream);
+      setCameraError('');
+      return stream;
+    } catch (err) {
+      setCameraError('Unable to access camera. Check permissions/device.');
+      console.error('Camera error:', err);
+      return null;
+    }
+  };
+
+  const getCoordinates = () =>
+    new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
+
+  const capturePhotoWithMetadata = async () => {
+    const stream = await ensureCameraStream();
+    if (!stream || !videoRef.current || !canvasRef.current) return null;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    // Wait for video to be ready and have valid dimensions
+    await new Promise((resolve) => {
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+        resolve();
+      } else {
+        const checkReady = () => {
+          if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+            video.removeEventListener('loadedmetadata', checkReady);
+            video.removeEventListener('loadeddata', checkReady);
+            resolve();
+          }
+        };
+        video.addEventListener('loadedmetadata', checkReady);
+        video.addEventListener('loadeddata', checkReady);
+        // Fallback timeout
+        setTimeout(() => {
+          video.removeEventListener('loadedmetadata', checkReady);
+          video.removeEventListener('loadeddata', checkReady);
+          resolve();
+        }, 2000);
+      }
+    });
+
+    // Additional small delay to ensure frame is ready
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    
+    if (width === 0 || height === 0) {
+      console.error('Video dimensions are invalid');
+      return null;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
+    // Clear canvas first
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw video frame
+    ctx.drawImage(video, 0, 0, width, height);
+
+    const timestamp = new Date();
+    const coords = await getCoordinates();
+    const overlayText = `${timestamp.toISOString()}${coords ? ` | ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : ' | No GPS'}`;
+    
+    // Draw overlay background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    const textWidth = ctx.measureText(overlayText).width;
+    ctx.fillRect(10, height - 40, textWidth + 20, 30);
+    
+    // Draw overlay text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(overlayText, 20, height - 20);
+
+    return {
+      id: `machine-${Date.now()}`,
+      timestamp: timestamp.toISOString(),
+      coords,
+      dataUrl: canvas.toDataURL('image/jpeg', 0.9),
+    };
+  };
+
+  const captureMachineFrame = async () => {
+    const photo = await capturePhotoWithMetadata();
+    if (!photo) return;
+    setMachinePhotos((prev) => {
+      const next = [...prev, photo].slice(-MAX_MACHINE_PHOTOS);
+      if (next.length >= MAX_MACHINE_PHOTOS) {
+        stopMachineInterval();
+        setIsMachineCapturing(false);
+      }
+      return next;
+    });
+  };
+
+  const startMachineCapture = async () => {
+    if (isMachineCapturing) return;
+    
+    // Ensure camera is started first
+    const stream = await ensureCameraStream();
+    if (!stream) {
+      setCameraError('Please start camera first');
+      return;
+    }
+    
+    // Wait for video to be ready
+    if (videoRef.current) {
+      await new Promise((resolve) => {
+        if (videoRef.current.readyState >= 2 && videoRef.current.videoWidth > 0) {
+          resolve();
+        } else {
+          const checkReady = () => {
+            if (videoRef.current && videoRef.current.readyState >= 2 && videoRef.current.videoWidth > 0) {
+              videoRef.current.removeEventListener('loadedmetadata', checkReady);
+              videoRef.current.removeEventListener('playing', checkReady);
+              resolve();
+            }
+          };
+          videoRef.current.addEventListener('loadedmetadata', checkReady);
+          videoRef.current.addEventListener('playing', checkReady);
+          setTimeout(() => resolve(), 2000); // Fallback
+        }
+      });
+    }
+    
+    setMachinePhotos([]);
+    setIsMachineCapturing(true);
+    await captureMachineFrame();
+    captureIntervalRef.current = setInterval(() => {
+      captureMachineFrame();
+    }, 5000);
+  };
+
+  const stopMachineCapture = () => {
+    stopMachineInterval();
+    setIsMachineCapturing(false);
+  };
 
   const startCapture = (sectionKey) => {
     if (anyReceiving) return;
@@ -340,6 +552,21 @@ const MachineTestPage = () => {
       machineData[key] = sections[key];
     });
     window.sessionStorage.setItem('vims.inspection.machineTest', JSON.stringify(machineData));
+    
+    // Save all photos (registration, inspection, and machine test) to persistent storage
+    const inspectionId = getSessionValue('vims.inspection.id');
+    const vehicleData = getStoredVehicle();
+    
+    if (inspectionId && vehicleData?.plateNumber) {
+      // Get existing photos if any
+      const existing = getPhotosByInspectionId(inspectionId);
+      saveInspectionPhotos(inspectionId, vehicleData, {
+        registration: existing?.photos?.registration || null,
+        inspection: existing?.photos?.inspection || [],
+        machineTest: machinePhotos,
+      });
+    }
+    
     navigate('/result');
   };
 
@@ -380,6 +607,165 @@ const MachineTestPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Machine Test Photo Capture */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Machine Testing Photos</p>
+            <p className="text-xs text-gray-500">Capture up to 7 frames every 5s with timestamp & GPS. Use Stop anytime.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={startMachineCapture}
+              disabled={isMachineCapturing}
+              className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#009639] text-white hover:bg-[#007c2d] disabled:opacity-60"
+            >
+              {isMachineCapturing ? 'Capturing…' : 'Start Capture'}
+            </button>
+            <button
+              type="button"
+              onClick={stopMachineCapture}
+              disabled={!isMachineCapturing}
+              className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+            >
+              Stop
+            </button>
+          </div>
+        </div>
+        {cameraError && <p className="text-xs text-red-600">{cameraError}</p>}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+          </div>
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+            {machinePhotos.length === 0 && (
+              <p className="text-xs text-gray-500">No photos yet. Start capture to begin.</p>
+            )}
+            {machinePhotos.map((photo, idx) => {
+              const date = new Date(photo.timestamp);
+              const formattedDate = date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              });
+              return (
+                <div key={photo.id} className="border rounded-lg p-2 bg-gray-50">
+                  <div className="flex items-start gap-3">
+                    <img src={photo.dataUrl} alt={`Machine test ${idx + 1}`} className="w-24 h-24 object-cover rounded-md border flex-shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-500">Photo #{idx + 1}</span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-xs text-gray-600">{formattedDate}</span>
+                      </div>
+                      {photo.coords ? (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                            <span className="text-xs font-semibold text-gray-700">Coordinates:</span>
+                          </div>
+                          <div className="pl-5 space-y-0.5">
+                            <p className="text-xs text-gray-600 font-mono">
+                              Lat: {photo.coords.lat.toFixed(6)}
+                            </p>
+                            <p className="text-xs text-gray-600 font-mono">
+                              Lng: {photo.coords.lng.toFixed(6)}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs text-amber-600">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+                          </svg>
+                          <span>GPS not available</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* All Captured Machine Test Photos Gallery - Prominent Display */}
+      {machinePhotos.length > 0 && (
+        <div className="bg-white border-2 border-[#009639] rounded-xl p-5 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#009639]/10 flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#009639]">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">All Machine Test Photos</h3>
+                <p className="text-xs text-gray-500">{machinePhotos.length} photos captured during machine testing</p>
+              </div>
+            </div>
+            <div className="px-3 py-1.5 bg-[#009639]/10 rounded-lg">
+              <span className="text-sm font-bold text-[#009639]">
+                {machinePhotos.length} Total
+              </span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {machinePhotos.map((photo, idx) => {
+              const date = new Date(photo.timestamp);
+              const formattedDate = date.toLocaleString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              });
+              return (
+                <div key={photo.id} className="border-2 border-purple-200 rounded-lg p-3 bg-purple-50/50">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-bold text-purple-700">Machine Test Photo</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded">#{idx + 1}</span>
+                  </div>
+                  <img src={photo.dataUrl} alt={`Machine test ${idx + 1}`} className="w-full h-48 object-cover rounded-md border-2 border-purple-200 mb-2" />
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v6l4 2" />
+                      </svg>
+                      <span className="font-semibold text-gray-700">Time:</span>
+                      <span className="text-gray-600">{formattedDate}</span>
+                    </div>
+                    {photo.coords ? (
+                      <div className="space-y-0.5 pl-4">
+                        <p className="text-gray-600 font-mono text-[10px]">
+                          Lat: {photo.coords.lat.toFixed(6)}
+                        </p>
+                        <p className="text-gray-600 font-mono text-[10px]">
+                          Lng: {photo.coords.lng.toFixed(6)}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-amber-600 text-[10px] pl-4">GPS not available</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Receiving Banner */}
       {anyReceiving && (
@@ -528,6 +914,7 @@ const MachineTestPage = () => {
           </div>
         </div>
       </div>
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 };
