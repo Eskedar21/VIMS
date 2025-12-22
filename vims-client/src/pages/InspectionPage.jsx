@@ -487,9 +487,6 @@ const InspectionPage = () => {
   const [cameraStream, setCameraStream] = useState(null);
   const [cameraError, setCameraError] = useState('');
   const [registrationPhoto, setRegistrationPhoto] = useState(null);
-  const [inspectionPhotos, setInspectionPhotos] = useState([]);
-  const [isInspectionCapturing, setIsInspectionCapturing] = useState(false);
-  const inspectionIntervalRef = useRef(null);
 
   // Get current category config and zones
   const categoryConfig = vehicleCategory ? VEHICLE_CATEGORIES[vehicleCategory] : null;
@@ -523,16 +520,8 @@ const InspectionPage = () => {
     setCameraStream(null);
   };
 
-  const stopInspectionInterval = () => {
-    if (inspectionIntervalRef.current) {
-      clearInterval(inspectionIntervalRef.current);
-      inspectionIntervalRef.current = null;
-    }
-  };
-
   useEffect(() => {
     return () => {
-      stopInspectionInterval();
       stopCameraStream();
     };
   }, []);
@@ -851,85 +840,6 @@ const InspectionPage = () => {
     }
   };
 
-  const MAX_INSPECTION_PHOTOS = 7;
-
-  const captureInspectionFrame = async () => {
-    const photo = await capturePhotoWithMetadata('inspection');
-    if (!photo) return;
-    setInspectionPhotos((prev) => {
-      const next = [...prev, photo].slice(-MAX_INSPECTION_PHOTOS);
-      if (next.length >= MAX_INSPECTION_PHOTOS) {
-        stopInspectionInterval();
-        setIsInspectionCapturing(false);
-      }
-      return next;
-    });
-  };
-
-  const startInspectionCapture = async () => {
-    if (isInspectionCapturing) return;
-    
-    // Ensure camera is started first
-    const stream = await ensureCameraStream();
-    if (!stream) {
-      setCameraError('Please start camera first');
-      return;
-    }
-    
-    // Wait for video to be playing and ready
-    if (videoRef.current) {
-      await new Promise((resolve) => {
-        const checkReady = () => {
-          if (videoRef.current && 
-              videoRef.current.readyState >= 2 && 
-              videoRef.current.videoWidth > 0 && 
-              videoRef.current.videoHeight > 0 &&
-              !videoRef.current.paused) {
-            videoRef.current.removeEventListener('loadedmetadata', checkReady);
-            videoRef.current.removeEventListener('playing', checkReady);
-            videoRef.current.removeEventListener('canplay', checkReady);
-            resolve();
-          }
-        };
-        
-        if (videoRef.current.readyState >= 2 && 
-            videoRef.current.videoWidth > 0 && 
-            videoRef.current.videoHeight > 0 &&
-            !videoRef.current.paused) {
-          resolve();
-        } else {
-          videoRef.current.addEventListener('loadedmetadata', checkReady);
-          videoRef.current.addEventListener('playing', checkReady);
-          videoRef.current.addEventListener('canplay', checkReady);
-          // Ensure video is playing
-          if (videoRef.current.paused) {
-            videoRef.current.play().catch(console.error);
-          }
-          setTimeout(() => {
-            videoRef.current?.removeEventListener('loadedmetadata', checkReady);
-            videoRef.current?.removeEventListener('playing', checkReady);
-            videoRef.current?.removeEventListener('canplay', checkReady);
-            resolve();
-          }, 3000);
-        }
-      });
-      
-      // Additional delay to ensure frames are rendering
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-    
-    setInspectionPhotos([]);
-    setIsInspectionCapturing(true);
-    await captureInspectionFrame();
-    inspectionIntervalRef.current = setInterval(() => {
-      captureInspectionFrame();
-    }, 5000);
-  };
-
-  const stopInspectionCapture = () => {
-    stopInspectionInterval();
-    setIsInspectionCapturing(false);
-  };
 
   const handleItemStatus = (itemId, status) => {
     if (status === 'FAIL') {
@@ -943,14 +853,14 @@ const InspectionPage = () => {
     }
   };
 
-  const handleDefectSubmit = (photo) => {
+  const handleDefectSubmit = () => {
     if (!selectedDefect) return;
     setChecklist(prev => ({
       ...prev,
       [defectModal.itemId]: {
         status: 'FAIL',
         defect: selectedDefect,
-        photo: photo?.name || null,
+        photo: null,
         timestamp: new Date().toISOString()
       }
     }));
@@ -987,7 +897,7 @@ const InspectionPage = () => {
       const existing = getPhotosByInspectionId(inspectionId);
       const photosToSave = {
         registration: registrationPhoto || existing?.photos?.registration || null,
-        inspection: inspectionPhotos.length > 0 ? inspectionPhotos : (existing?.photos?.inspection || []),
+        inspection: existing?.photos?.inspection || [],
         machineTest: existing?.photos?.machineTest || [],
       };
       console.log('Saving visual inspection photos:', {
@@ -1038,7 +948,7 @@ const InspectionPage = () => {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 bg-red-50">
               <h3 className="text-lg font-bold text-red-800">Document Defect</h3>
-              <p className="text-sm text-red-600">Photo evidence is mandatory for failures</p>
+              <p className="text-sm text-red-600">Select the type of defect found</p>
             </div>
             <div className="p-5 space-y-4">
               <div>
@@ -1053,27 +963,6 @@ const InspectionPage = () => {
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Capture Photo</label>
-                <label className="flex items-center justify-center gap-2 h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
-                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                  <span className="text-sm text-gray-500">Click to capture</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files?.[0] && selectedDefect) {
-                        handleDefectSubmit(e.target.files[0]);
-                      }
-                    }}
-                  />
-                </label>
               </div>
             </div>
             <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex justify-between">
@@ -1090,10 +979,10 @@ const InspectionPage = () => {
               <button
                 type="button"
                 disabled={!selectedDefect}
-                onClick={() => handleDefectSubmit(null)}
+                onClick={() => handleDefectSubmit()}
                 className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50"
               >
-                Save Without Photo
+                Save
               </button>
             </div>
           </div>
@@ -1325,125 +1214,8 @@ const InspectionPage = () => {
       {/* 30-Point Visual Inspection */}
       {activeTab === 'visual' && (
         <div className="space-y-4">
-          {/* Photo Capture Controls */}
-          <div className="bg-white border rounded-xl p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Live Inspection Photos</p>
-                <p className="text-xs text-gray-500">Automatically capture up to 7 photos every 5s with GPS and timestamp overlay.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={ensureCameraStream}
-                  disabled={isInspectionCapturing}
-                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                >
-                  {cameraStream ? '✓ Camera Ready' : 'Start Camera'}
-                </button>
-                <button
-                  type="button"
-                  onClick={startInspectionCapture}
-                  disabled={isInspectionCapturing || !cameraStream}
-                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#009639] text-white hover:bg-[#007c2d] disabled:opacity-60"
-                >
-                  {isInspectionCapturing ? 'Capturing…' : 'Start Capture'}
-                </button>
-                <button
-                  type="button"
-                  onClick={stopInspectionCapture}
-                  disabled={!isInspectionCapturing}
-                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-                >
-                  Stop
-                </button>
-              </div>
-            </div>
-            {cameraError && <p className="text-xs text-red-600">{cameraError}</p>}
-            {!cameraStream && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-xs text-amber-800">
-                  <strong>Step 1:</strong> Click "Start Camera" to initialize the camera feed.
-                </p>
-              </div>
-            )}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                {!cameraStream && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-                    <div className="text-center text-white">
-                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mx-auto mb-2 opacity-50">
-                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                      </svg>
-                      <p className="text-sm">Camera not started</p>
-                      <p className="text-xs opacity-75 mt-1">Click "Start Camera" to begin</p>
-                    </div>
-                  </div>
-                )}
-                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-              </div>
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                {inspectionPhotos.length === 0 && (
-                  <p className="text-xs text-gray-500">No inspection photos yet. Start capture to begin.</p>
-                )}
-                {inspectionPhotos.map((photo, idx) => {
-                  const date = new Date(photo.timestamp);
-                  const formattedDate = date.toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  });
-                  return (
-                    <div key={photo.id} className="border rounded-lg p-2 bg-gray-50">
-                      <div className="flex items-start gap-3">
-                        <img src={photo.dataUrl} alt={`Inspection ${idx + 1}`} className="w-24 h-24 object-cover rounded-md border flex-shrink-0" />
-                        <div className="flex-1 min-w-0 space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-gray-500">Photo #{idx + 1}</span>
-                            <span className="text-xs text-gray-400">•</span>
-                            <span className="text-xs text-gray-600">{formattedDate}</span>
-                          </div>
-                          {photo.coords ? (
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-2">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
-                                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                  <circle cx="12" cy="10" r="3" />
-                                </svg>
-                                <span className="text-xs font-semibold text-gray-700">Coordinates:</span>
-                              </div>
-                              <div className="pl-5 space-y-0.5">
-                                <p className="text-xs text-gray-600 font-mono">
-                                  Lat: {photo.coords.lat.toFixed(6)}
-                                </p>
-                                <p className="text-xs text-gray-600 font-mono">
-                                  Lng: {photo.coords.lng.toFixed(6)}
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-xs text-amber-600">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-                              </svg>
-                              <span>GPS not available</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* All Captured Photos Gallery - Prominent Display */}
-          {(inspectionPhotos.length > 0 || registrationPhoto) && (
+          {/* Registration Photo Display (if available) */}
+          {registrationPhoto && (
             <div className="bg-white border-2 border-[#009639] rounded-xl p-5 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -1454,24 +1226,13 @@ const InspectionPage = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">All Captured Photos</h3>
-                    <p className="text-xs text-gray-500">
-                      {registrationPhoto ? '1 registration photo' : ''}
-                      {registrationPhoto && inspectionPhotos.length > 0 ? ' + ' : ''}
-                      {inspectionPhotos.length > 0 ? `${inspectionPhotos.length} inspection photos` : ''}
-                    </p>
+                    <h3 className="text-lg font-bold text-gray-900">Registration Photo</h3>
+                    <p className="text-xs text-gray-500">Vehicle registration photo captured during registration</p>
                   </div>
-                </div>
-                <div className="px-3 py-1.5 bg-[#009639]/10 rounded-lg">
-                  <span className="text-sm font-bold text-[#009639]">
-                    {1 + inspectionPhotos.length} Total
-                  </span>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Registration Photo */}
-                {registrationPhoto && (
                   <div className="border-2 border-blue-200 rounded-lg p-3 bg-blue-50/50">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-bold text-blue-700">Registration Photo</span>
@@ -1509,51 +1270,7 @@ const InspectionPage = () => {
                       )}
                     </div>
                   </div>
-                )}
-
-                {/* Inspection Photos */}
-                {inspectionPhotos.map((photo, idx) => {
-                  const date = new Date(photo.timestamp);
-                  const formattedDate = date.toLocaleString('en-US', {
-                    month: 'short',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  });
-                  return (
-                    <div key={photo.id} className="border-2 border-green-200 rounded-lg p-3 bg-green-50/50">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-xs font-bold text-green-700">Inspection Photo</span>
-                        <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded">#{idx + 1}</span>
                       </div>
-                      <img src={photo.dataUrl} alt={`Inspection ${idx + 1}`} className="w-full h-48 object-cover rounded-md border-2 border-green-200 mb-2" />
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M12 6v6l4 2" />
-                          </svg>
-                          <span className="font-semibold text-gray-700">Time:</span>
-                          <span className="text-gray-600">{formattedDate}</span>
-                        </div>
-                        {photo.coords ? (
-                          <div className="space-y-0.5 pl-4">
-                            <p className="text-gray-600 font-mono text-[10px]">
-                              Lat: {photo.coords.lat.toFixed(6)}
-                            </p>
-                            <p className="text-gray-600 font-mono text-[10px]">
-                              Lng: {photo.coords.lng.toFixed(6)}
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-amber-600 text-[10px] pl-4">GPS not available</p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
 
@@ -1692,11 +1409,6 @@ const InspectionPage = () => {
                                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                       </svg>
                                       {DEFECT_OPTIONS.find(d => d.value === itemState.defect)?.label || itemState.defect}
-                                      {itemState.photo && (
-                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" className="ml-1 text-gray-400">
-                                          <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
-                                        </svg>
-                                      )}
                                     </p>
                                   )}
                                 </div>

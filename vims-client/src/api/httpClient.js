@@ -42,4 +42,5 @@ const httpClient = {
   patch: (path, body, options) => request(path, { ...options, method: 'PATCH', body }),
 };
 
+export { httpClient };
 export default httpClient;
