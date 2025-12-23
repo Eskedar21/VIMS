@@ -87,7 +87,7 @@ const LoginPage = () => {
         return {
           label: 'Trusted Machine Verified',
           description: 'Hardware certificate and MAC address matched.',
-          tone: 'text-[#00652E] bg-green-50 border-green-100',
+          tone: 'text-[#0fa84a] bg-green-50 border-green-100',
         };
       case 'denied':
         return {
@@ -132,7 +132,7 @@ const LoginPage = () => {
                     setLangDropdownOpen(false);
                   }}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                    lang.code === selectedLang ? 'text-[#009639] font-semibold' : 'text-gray-700'
+                    lang.code === selectedLang ? 'text-[#88bf47] font-semibold' : 'text-gray-700'
                   }`}
                 >
                   {lang.label}
@@ -147,9 +147,9 @@ const LoginPage = () => {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 px-8 py-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <h1 className="text-3xl font-bold text-[#009639] tracking-tight">VIS</h1>
+          <h1 className="text-3xl font-bold text-[#88bf47] tracking-tight">VIS</h1>
           <p className="text-xs text-gray-500 mt-1">
-            powered by <span className="font-semibold text-[#009639]">Ethiotelecom</span>
+            powered by <span className="font-semibold text-[#88bf47]">Ethiotelecom</span>
           </p>
         </div>
 
@@ -161,7 +161,7 @@ const LoginPage = () => {
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               placeholder="Inspector ID / username"
-              className="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#009639] focus:ring-[#009639]/30 focus:ring-2 outline-none text-gray-800 transition"
+              className="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#88bf47] focus:ring-[#88bf47]/30 focus:ring-2 outline-none text-gray-800 transition"
               autoComplete="username"
               required
             />
@@ -174,7 +174,7 @@ const LoginPage = () => {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Enter password"
-              className="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#009639] focus:ring-[#009639]/30 focus:ring-2 outline-none text-gray-800 transition"
+              className="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#88bf47] focus:ring-[#88bf47]/30 focus:ring-2 outline-none text-gray-800 transition"
               autoComplete="current-password"
               required
             />
@@ -190,7 +190,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-12 h-12 rounded-xl bg-[#009639] text-white font-semibold shadow-lg shadow-[#009639]/20 hover:bg-[#007c2d] disabled:opacity-70 disabled:cursor-not-allowed transition-transform active:scale-[0.98]"
+              className="px-12 h-12 rounded-xl bg-[#88bf47] text-white font-semibold shadow-lg shadow-[#88bf47]/20 hover:bg-[#0fa84a] disabled:opacity-70 disabled:cursor-not-allowed transition-transform active:scale-[0.98]"
             >
               {isSubmitting ? 'Signing in…' : 'Login'}
             </button>

@@ -2,11 +2,11 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const MOCK_COMPLETED = [
-  { id: 'VIS-2025-0023', dateTime: '2025-11-26 09:45', plate: 'ET 12345A', vehicleType: 'Passenger Car', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0023', paymentStatus: 'Paid' },
-  { id: 'VIS-2025-0022', dateTime: '2025-11-26 09:12', plate: 'ET 87923B', vehicleType: 'Mini Bus', technician: 'Sara Tesfaye', result: 'FAIL', certificateNo: null, paymentStatus: 'Paid' },
-  { id: 'VIS-2025-0021', dateTime: '2025-11-26 08:55', plate: 'ET 29487C', vehicleType: 'Cargo Truck', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0021', paymentStatus: 'Paid' },
-  { id: 'VIS-2025-0020', dateTime: '2025-11-25 16:30', plate: 'ET 85216Z', vehicleType: 'Passenger Car', technician: 'Dawit Haile', result: 'PASS', certificateNo: 'CERT-2025-0020', paymentStatus: 'Paid' },
-  { id: 'VIS-2025-0019', dateTime: '2025-11-25 15:20', plate: 'ET 44821D', vehicleType: 'Motorcycle', technician: 'Sara Tesfaye', result: 'PASS', certificateNo: 'CERT-2025-0019', paymentStatus: 'Paid' },
+  { id: 'VIS-2025-0023', dateTime: '2025-11-26 09:45', plate: 'ET 12345A', vehicleType: 'Passenger Car', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0023' },
+  { id: 'VIS-2025-0022', dateTime: '2025-11-26 09:12', plate: 'ET 87923B', vehicleType: 'Mini Bus', technician: 'Sara Tesfaye', result: 'FAIL', certificateNo: null },
+  { id: 'VIS-2025-0021', dateTime: '2025-11-26 08:55', plate: 'ET 29487C', vehicleType: 'Cargo Truck', technician: 'Abebe Kebede', result: 'PASS', certificateNo: 'CERT-2025-0021' },
+  { id: 'VIS-2025-0020', dateTime: '2025-11-25 16:30', plate: 'ET 85216Z', vehicleType: 'Passenger Car', technician: 'Dawit Haile', result: 'PASS', certificateNo: 'CERT-2025-0020' },
+  { id: 'VIS-2025-0019', dateTime: '2025-11-25 15:20', plate: 'ET 44821D', vehicleType: 'Motorcycle', technician: 'Sara Tesfaye', result: 'PASS', certificateNo: 'CERT-2025-0019' },
 ];
 
 const CompletedInspectionsPage = () => {
@@ -32,7 +32,7 @@ const CompletedInspectionsPage = () => {
           placeholder="Search by Plate or ID..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#009639]/20"
+          className="px-4 py-2 rounded-lg border border-gray-200 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#88bf47]/20"
         />
       </div>
 
@@ -54,7 +54,7 @@ const CompletedInspectionsPage = () => {
             {filteredData.map((row) => (
               <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                 <td className="px-4 py-3 text-gray-600">{row.dateTime}</td>
-                <td className="px-4 py-3 font-mono text-xs text-[#009639]">{row.id}</td>
+                <td className="px-4 py-3 font-mono text-xs text-[#88bf47]">{row.id}</td>
                 <td className="px-4 py-3 font-semibold">{row.plate}</td>
                 <td className="px-4 py-3 text-gray-600">{row.vehicleType}</td>
                 <td className="px-4 py-3">{row.technician}</td>
@@ -74,10 +74,9 @@ const CompletedInspectionsPage = () => {
                       onClick={() => {
                         // Store inspection data for result page
                         window.sessionStorage.setItem('vims.inspection.id', row.id);
-                        window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus || 'Paid');
                         navigate('/result');
                       }} 
-                      className="text-xs text-[#009639] hover:underline font-medium"
+                      className="text-xs text-[#88bf47] hover:underline font-medium"
                     >
                       View
                     </button>
@@ -85,7 +84,6 @@ const CompletedInspectionsPage = () => {
                       onClick={() => {
                         // Store inspection ID for result page
                         window.sessionStorage.setItem('vims.inspection.id', row.id);
-                        window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus || 'Paid');
                         // Navigate to result page with print flag
                         navigate('/result?print=true');
                       }}

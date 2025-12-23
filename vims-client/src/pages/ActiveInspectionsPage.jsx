@@ -31,7 +31,7 @@ const ActiveInspectionsPage = () => {
         <h1 className="text-xl font-semibold text-gray-900">Active Inspections</h1>
         <button
           onClick={() => navigate('/inspection')}
-          className="px-4 py-2 bg-[#009639] text-white rounded-lg font-medium hover:bg-[#007c2d] transition"
+          className="px-4 py-2 bg-[#88bf47] text-white rounded-lg font-medium hover:bg-[#0fa84a] transition"
         >
           + New Inspection
         </button>
@@ -54,7 +54,7 @@ const ActiveInspectionsPage = () => {
           <tbody>
             {MOCK_ACTIVE.map((row) => (
               <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                <td className="px-4 py-3 font-mono text-xs text-[#009639]">{row.id}</td>
+                <td className="px-4 py-3 font-mono text-xs text-[#88bf47]">{row.id}</td>
                 <td className="px-4 py-3 font-semibold">{row.plate}</td>
                 <td className="px-4 py-3 text-gray-600">{row.vehicleType}</td>
                 <td className="px-4 py-3">
@@ -67,7 +67,7 @@ const ActiveInspectionsPage = () => {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#009639] rounded-full" style={{ width: `${row.progress}%` }} />
+                      <div className="h-full bg-[#88bf47] rounded-full" style={{ width: `${row.progress}%` }} />
                     </div>
                     <span className="text-xs text-gray-500">{row.progress}%</span>
                   </div>
@@ -85,7 +85,7 @@ const ActiveInspectionsPage = () => {
                         navigate('/machine-test');
                       }
                     }}
-                    className="text-xs text-[#009639] hover:underline font-medium"
+                    className="text-xs text-[#88bf47] hover:underline font-medium"
                   >
                     Continue
                   </button>

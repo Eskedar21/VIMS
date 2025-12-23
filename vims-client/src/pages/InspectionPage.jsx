@@ -666,8 +666,6 @@ const InspectionPage = () => {
         formId: categoryConfig?.formId,
         testStartTime: startTime,
       }));
-      // Set payment status to Pending for new inspections (payment will be requested)
-      window.sessionStorage.setItem('vims.inspection.paymentStatus', 'Pending');
       setIsSavingRegistration(false);
       setActiveTab('visual');
     }, 600);
@@ -915,7 +913,7 @@ const InspectionPage = () => {
     }, 600);
   };
 
-  const inputClass = "w-full h-11 px-4 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:border-[#009639] focus:ring-2 focus:ring-[#009639]/20 focus:outline-none transition";
+  const inputClass = "w-full h-11 px-4 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:border-[#88bf47] focus:ring-2 focus:ring-[#88bf47]/20 focus:outline-none transition";
 
   // Show category selection modal if no category selected
   if (showCategoryModal) {
@@ -1019,7 +1017,7 @@ const InspectionPage = () => {
           </button>
           <div className="text-right">
             <p className="text-xs text-gray-400 uppercase tracking-wide">Inspection ID</p>
-            <p className="text-sm font-mono font-semibold text-[#009639]">{formattedInspectionId}</p>
+            <p className="text-sm font-mono font-semibold text-[#88bf47]">{formattedInspectionId}</p>
           </div>
         </div>
       </div>
@@ -1034,7 +1032,7 @@ const InspectionPage = () => {
           }`}
         >
           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-            activeTab === 'registration' ? 'bg-[#009639] text-white' : inspectionId ? 'bg-[#009639] text-white' : 'bg-gray-300 text-white'
+            activeTab === 'registration' ? 'bg-[#88bf47] text-white' : inspectionId ? 'bg-[#88bf47] text-white' : 'bg-gray-300 text-white'
           }`}>
             {inspectionId ? '✓' : '1'}
           </span>
@@ -1049,7 +1047,7 @@ const InspectionPage = () => {
           }`}
         >
           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-            activeTab === 'visual' ? 'bg-[#009639] text-white' : allComplete ? 'bg-[#009639] text-white' : 'bg-gray-300 text-white'
+            activeTab === 'visual' ? 'bg-[#88bf47] text-white' : allComplete ? 'bg-[#88bf47] text-white' : 'bg-gray-300 text-white'
           }`}>
             {allComplete ? '✓' : '2'}
           </span>
@@ -1131,7 +1129,7 @@ const InspectionPage = () => {
                   <button
                     type="button"
                     onClick={handleRegistrationPhotoCapture}
-                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#009639] text-white hover:bg-[#007c2d]"
+                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#88bf47] text-white hover:bg-[#0fa84a]"
                   >
                     Capture Photo
                   </button>
@@ -1203,7 +1201,7 @@ const InspectionPage = () => {
             </div>
           </div>
           <div className={`px-6 py-4 border-t flex items-center justify-end ${vehicleCategory === 'HEAVY' ? 'bg-amber-50/50 border-amber-100' : 'bg-gray-50/50 border-gray-100'}`}>
-            <button type="button" onClick={handleRegistrationSave} disabled={isSavingRegistration} className="px-6 py-2.5 rounded-lg bg-[#009639] text-white text-sm font-semibold hover:bg-[#007c2d] disabled:opacity-60 transition flex items-center gap-2">
+            <button type="button" onClick={handleRegistrationSave} disabled={isSavingRegistration} className="px-6 py-2.5 rounded-lg bg-[#88bf47] text-white text-sm font-semibold hover:bg-[#0fa84a] disabled:opacity-60 transition flex items-center gap-2">
               {isSavingRegistration ? 'Saving...' : 'Save & Continue'}
               <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
             </button>
@@ -1216,11 +1214,11 @@ const InspectionPage = () => {
         <div className="space-y-4">
           {/* Registration Photo Display (if available) */}
           {registrationPhoto && (
-            <div className="bg-white border-2 border-[#009639] rounded-xl p-5 shadow-lg">
+            <div className="bg-white border-2 border-[#88bf47] rounded-xl p-5 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#009639]/10 flex items-center justify-center">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#009639]">
+                  <div className="w-10 h-10 rounded-lg bg-[#88bf47]/10 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#88bf47]">
                       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
                       <circle cx="12" cy="13" r="4" />
                     </svg>
@@ -1281,8 +1279,8 @@ const InspectionPage = () => {
           <div className={`bg-white rounded-xl border p-4 ${vehicleCategory === 'HEAVY' ? 'border-amber-200' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center ${vehicleCategory === 'HEAVY' ? 'bg-amber-100' : 'bg-[#009639]/10'}`}>
-                  <span className={`text-xl font-bold ${vehicleCategory === 'HEAVY' ? 'text-amber-700' : 'text-[#009639]'}`}>{checkedCount}/{totalItems}</span>
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center ${vehicleCategory === 'HEAVY' ? 'bg-amber-100' : 'bg-[#88bf47]/10'}`}>
+                  <span className={`text-xl font-bold ${vehicleCategory === 'HEAVY' ? 'text-amber-700' : 'text-[#88bf47]'}`}>{checkedCount}/{totalItems}</span>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">30-Point Visual Inspection</p>
@@ -1296,7 +1294,7 @@ const InspectionPage = () => {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-40 h-3 bg-gray-200 rounded-full overflow-hidden">
-                  <div className={`h-full transition-all duration-300 ${vehicleCategory === 'HEAVY' ? 'bg-amber-500' : 'bg-[#009639]'}`} style={{ width: `${(checkedCount / totalItems) * 100}%` }} />
+                  <div className={`h-full transition-all duration-300 ${vehicleCategory === 'HEAVY' ? 'bg-amber-500' : 'bg-[#88bf47]'}`} style={{ width: `${(checkedCount / totalItems) * 100}%` }} />
                 </div>
                 <span className="text-sm font-semibold text-gray-700">{Math.round((checkedCount / totalItems) * 100)}%</span>
               </div>
@@ -1468,7 +1466,7 @@ const InspectionPage = () => {
               onChange={(e) => setVisualNotes(e.target.value)}
               rows={3}
               placeholder="Any additional observations..."
-              className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm resize-none focus:border-[#009639] focus:ring-2 focus:ring-[#009639]/20 focus:outline-none"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm resize-none focus:border-[#88bf47] focus:ring-2 focus:ring-[#88bf47]/20 focus:outline-none"
             />
             <div className="mt-4 flex items-center justify-between">
               <p className="text-sm text-gray-500">
@@ -1484,7 +1482,7 @@ const InspectionPage = () => {
                 disabled={!allComplete || isSavingVisual}
                 className={`px-6 py-2.5 rounded-lg text-white text-sm font-semibold transition flex items-center gap-2 ${
                   allComplete
-                    ? vehicleCategory === 'HEAVY' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[#009639] hover:bg-[#007c2d]'
+                    ? vehicleCategory === 'HEAVY' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[#88bf47] hover:bg-[#0fa84a]'
                     : 'bg-gray-300 cursor-not-allowed'
                 }`}
               >

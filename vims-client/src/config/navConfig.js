@@ -120,9 +120,12 @@ export function getNavForRole(role) {
  */
 export const DESIGN_TOKENS = {
   colors: {
-    primary: '#009639',
-    primaryDark: '#007A2F',
-    success: '#16A34A',
+    primary: '#88bf47',
+    primaryDark: '#0fa84a',
+    primaryLight: '#88bf47',
+    secondary: '#1d8dcc',
+    accent: '#1d8dcc',
+    success: '#0fa84a',
     error: '#DC2626',
     warning: '#F59E0B',
     bg: '#F4F6F5',

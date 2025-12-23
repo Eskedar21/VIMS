@@ -91,6 +91,7 @@ export const saveInspectionPhotos = (inspectionId, vehicleData, photos) => {
 
 /**
  * Search inspections by plate, chassis, owner, or inspection ID
+ * Also searches for numeric patterns within these fields
  */
 export const searchInspections = (query) => {
   if (!query || !query.trim()) return [];
@@ -98,18 +99,36 @@ export const searchInspections = (query) => {
   const index = getAllInspections();
   const q = query.toLowerCase().trim();
   
+  // Extract numbers from query for numeric search
+  const numericPattern = q.replace(/\D/g, ''); // Extract only digits
+  
   return index.filter((item) => {
     const plate = (item.plateNumber || '').toLowerCase();
     const chassis = (item.chassisNumber || '').toLowerCase();
     const owner = (item.ownerName || '').toLowerCase();
     const inspectionId = (item.inspectionId || '').toLowerCase();
     
-    return (
+    // Extract numbers from each field for numeric matching
+    const plateNumbers = (item.plateNumber || '').replace(/\D/g, '');
+    const chassisNumbers = (item.chassisNumber || '').replace(/\D/g, '');
+    const inspectionIdNumbers = (item.inspectionId || '').replace(/\D/g, '');
+    
+    // Text-based search
+    const textMatch = (
       plate.includes(q) ||
       chassis.includes(q) ||
       owner.includes(q) ||
       inspectionId.includes(q)
     );
+    
+    // Numeric search - if query contains numbers, also search by numbers
+    const numericMatch = numericPattern.length > 0 && (
+      plateNumbers.includes(numericPattern) ||
+      chassisNumbers.includes(numericPattern) ||
+      inspectionIdNumbers.includes(numericPattern)
+    );
+    
+    return textMatch || numericMatch;
   });
 };
 

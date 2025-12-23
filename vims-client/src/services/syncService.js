@@ -34,7 +34,6 @@ const formatInspectionForAPI = (inspection) => {
     centerName: inspection.centerName,
     status: inspection.status,
     overallResult: inspection.overallResult,
-    paymentStatus: inspection.paymentStatus,
     type: inspection.type,
     amount: inspection.amount,
     inspectionDate: inspection.inspectionDate,

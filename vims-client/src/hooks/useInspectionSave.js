@@ -40,7 +40,6 @@ export const useInspectionSave = () => {
         centerName: inspectionData.centerName,
         status: inspectionData.status || 'Pending',
         overallResult: inspectionData.overallResult || inspectionData.status,
-        paymentStatus: inspectionData.paymentStatus || 'Pending',
         type: inspectionData.type || 'Initial Inspection',
         amount: inspectionData.amount || 0,
         inspectionDate: inspectionData.inspectionDate || new Date().toISOString(),

@@ -587,199 +587,85 @@ const MachineTestPage = () => {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Vehicle Info Header */}
-      <VehicleInfoBar />
+    <div className="flex gap-4">
+      {/* Main Content Area */}
+      <div className="flex-1 space-y-4 min-w-0">
+        {/* Vehicle Info Header */}
+        <VehicleInfoBar />
 
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Machine Test Station</h1>
-          <p className="text-sm text-gray-500">Automated equipment data capture • {fuelType} vehicle</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Progress</p>
-            <p className="text-lg font-bold text-gray-900">{completedCount}/{orderedSections.length}</p>
-          </div>
-          <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full bg-[#009639] transition-all duration-300" style={{ width: `${(completedCount / orderedSections.length) * 100}%` }} />
-          </div>
-        </div>
-      </div>
-
-      {/* Machine Test Photo Capture */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+        {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-900">Machine Testing Photos</p>
-            <p className="text-xs text-gray-500">Capture up to 7 frames every 5s with timestamp & GPS. Use Stop anytime.</p>
+            <h1 className="text-xl font-bold text-gray-900">Machine Test Station</h1>
+            <p className="text-sm text-gray-500">Automated equipment data capture • {fuelType} vehicle</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={startMachineCapture}
-              disabled={isMachineCapturing}
-              className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#009639] text-white hover:bg-[#007c2d] disabled:opacity-60"
-            >
-              {isMachineCapturing ? 'Capturing…' : 'Start Capture'}
-            </button>
-            <button
-              type="button"
-              onClick={stopMachineCapture}
-              disabled={!isMachineCapturing}
-              className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-            >
-              Stop
-            </button>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-xs text-gray-400">Progress</p>
+              <p className="text-lg font-bold text-gray-900">{completedCount}/{orderedSections.length}</p>
+            </div>
+            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-[#88bf47] transition-all duration-300" style={{ width: `${(completedCount / orderedSections.length) * 100}%` }} />
+            </div>
           </div>
         </div>
-        {cameraError && <p className="text-xs text-red-600">{cameraError}</p>}
+
+        {/* Machine Test Photo Capture Controls */}
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Machine Testing Photos</p>
+              <p className="text-xs text-gray-500">Capture up to 7 frames every 5s with timestamp & GPS</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={startMachineCapture}
+                disabled={isMachineCapturing}
+                className="px-3 py-2 text-xs font-semibold rounded-lg bg-[#88bf47] text-white hover:bg-[#0fa84a] disabled:opacity-60"
+              >
+                {isMachineCapturing ? 'Capturing…' : 'Start Capture'}
+              </button>
+              <button
+                type="button"
+                onClick={stopMachineCapture}
+                disabled={!isMachineCapturing}
+                className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+              >
+                Stop
+              </button>
+            </div>
+          </div>
+          {cameraError && <p className="text-xs text-red-600 mb-2">{cameraError}</p>}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+            </div>
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <p className="text-xs font-semibold text-gray-700 mb-2">Capture Info</p>
+              <div className="space-y-2 text-xs text-gray-600">
+                <p>• Photos are automatically captured every 5 seconds</p>
+                <p>• Maximum of 7 photos per session</p>
+                <p>• Each photo includes timestamp and GPS coordinates</p>
+                <p>• View captured photos in the sidebar →</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Receiving Banner */}
+        {anyReceiving && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-3">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div>
+              <p className="text-sm font-semibold text-blue-800">Receiving data from equipment...</p>
+              <p className="text-xs text-blue-600">Please wait for the test to complete</p>
+            </div>
+          </div>
+        )}
+
+        {/* Test Sections Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-          </div>
-          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-            {machinePhotos.length === 0 && (
-              <p className="text-xs text-gray-500">No photos yet. Start capture to begin.</p>
-            )}
-            {machinePhotos.map((photo, idx) => {
-              const date = new Date(photo.timestamp);
-              const formattedDate = date.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-              });
-              return (
-                <div key={photo.id} className="border rounded-lg p-2 bg-gray-50">
-                  <div className="flex items-start gap-3">
-                    <img src={photo.dataUrl} alt={`Machine test ${idx + 1}`} className="w-24 h-24 object-cover rounded-md border flex-shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-500">Photo #{idx + 1}</span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-600">{formattedDate}</span>
-                      </div>
-                      {photo.coords ? (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
-                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                              <circle cx="12" cy="10" r="3" />
-                            </svg>
-                            <span className="text-xs font-semibold text-gray-700">Coordinates:</span>
-                          </div>
-                          <div className="pl-5 space-y-0.5">
-                            <p className="text-xs text-gray-600 font-mono">
-                              Lat: {photo.coords.lat.toFixed(6)}
-                            </p>
-                            <p className="text-xs text-gray-600 font-mono">
-                              Lng: {photo.coords.lng.toFixed(6)}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-xs text-amber-600">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-                          </svg>
-                          <span>GPS not available</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* All Captured Machine Test Photos Gallery - Prominent Display */}
-      {machinePhotos.length > 0 && (
-        <div className="bg-white border-2 border-[#009639] rounded-xl p-5 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#009639]/10 flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#009639]">
-                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">All Machine Test Photos</h3>
-                <p className="text-xs text-gray-500">{machinePhotos.length} photos captured during machine testing</p>
-              </div>
-            </div>
-            <div className="px-3 py-1.5 bg-[#009639]/10 rounded-lg">
-              <span className="text-sm font-bold text-[#009639]">
-                {machinePhotos.length} Total
-              </span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {machinePhotos.map((photo, idx) => {
-              const date = new Date(photo.timestamp);
-              const formattedDate = date.toLocaleString('en-US', {
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-              });
-              return (
-                <div key={photo.id} className="border-2 border-purple-200 rounded-lg p-3 bg-purple-50/50">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-bold text-purple-700">Machine Test Photo</span>
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded">#{idx + 1}</span>
-                  </div>
-                  <img src={photo.dataUrl} alt={`Machine test ${idx + 1}`} className="w-full h-48 object-cover rounded-md border-2 border-purple-200 mb-2" />
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M12 6v6l4 2" />
-                      </svg>
-                      <span className="font-semibold text-gray-700">Time:</span>
-                      <span className="text-gray-600">{formattedDate}</span>
-                    </div>
-                    {photo.coords ? (
-                      <div className="space-y-0.5 pl-4">
-                        <p className="text-gray-600 font-mono text-[10px]">
-                          Lat: {photo.coords.lat.toFixed(6)}
-                        </p>
-                        <p className="text-gray-600 font-mono text-[10px]">
-                          Lng: {photo.coords.lng.toFixed(6)}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-amber-600 text-[10px] pl-4">GPS not available</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Receiving Banner */}
-      {anyReceiving && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-3">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <div>
-            <p className="text-sm font-semibold text-blue-800">Receiving data from equipment...</p>
-            <p className="text-xs text-blue-600">Please wait for the test to complete</p>
-          </div>
-        </div>
-      )}
-
-      {/* Test Sections Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {orderedSections.map((sectionKey) => {
           const section = sections[sectionKey];
           const definition = SECTION_DEFINITIONS[sectionKey];
@@ -813,7 +699,7 @@ const MachineTestPage = () => {
                     <button
                       onClick={() => startCapture(sectionKey)}
                       disabled={anyReceiving}
-                      className="px-6 py-2.5 bg-[#009639] text-white text-sm font-semibold rounded-lg hover:bg-[#007c2d] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                      className="px-6 py-2.5 bg-[#88bf47] text-white text-sm font-semibold rounded-lg hover:bg-[#0fa84a] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
                     >
                       {Icons.play} Start Capture
                     </button>
@@ -873,11 +759,11 @@ const MachineTestPage = () => {
             </div>
           );
         })}
-      </div>
+        </div>
 
-      {/* Summary & Actions */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center justify-between">
+        {/* Summary & Actions */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {orderedSections.map((key) => {
               const s = sections[key];
@@ -904,7 +790,7 @@ const MachineTestPage = () => {
             <button
               onClick={handleProceed}
               disabled={!allComplete}
-              className="px-6 py-2.5 bg-[#009639] text-white text-sm font-semibold rounded-lg hover:bg-[#007c2d] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2.5 bg-[#88bf47] text-white text-sm font-semibold rounded-lg hover:bg-[#0fa84a] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Proceed to Results
               <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -912,8 +798,76 @@ const MachineTestPage = () => {
               </svg>
             </button>
           </div>
+          </div>
         </div>
       </div>
+
+      {/* Sidebar - Photo Gallery */}
+      <div className="w-80 flex-shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col max-h-[calc(100vh-8rem)] sticky top-4">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-gray-900">Captured Photos</h3>
+            {machinePhotos.length > 0 && (
+              <span className="px-2 py-0.5 text-xs font-bold bg-[#88bf47]/10 text-[#88bf47] rounded">
+                {machinePhotos.length}/{MAX_MACHINE_PHOTOS}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">Machine test photos with GPS</p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {machinePhotos.length === 0 ? (
+            <div className="text-center py-8">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-300 mx-auto mb-2">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              <p className="text-xs text-gray-400">No photos yet</p>
+              <p className="text-xs text-gray-400">Start capture to begin</p>
+            </div>
+          ) : (
+            machinePhotos.map((photo, idx) => {
+              const date = new Date(photo.timestamp);
+              const formattedDate = date.toLocaleString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              });
+              return (
+                <div key={photo.id} className="border border-gray-200 rounded-lg p-2 bg-gray-50 hover:bg-gray-100 transition">
+                  <div className="flex items-start gap-2 mb-2">
+                    <img 
+                      src={photo.dataUrl} 
+                      alt={`Photo ${idx + 1}`} 
+                      className="w-20 h-20 object-cover rounded border flex-shrink-0" 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs font-bold text-gray-700">#{idx + 1}</span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-xs text-gray-600 truncate">{formattedDate}</span>
+                      </div>
+                      {photo.coords ? (
+                        <div className="space-y-0.5">
+                          <p className="text-[10px] text-gray-600 font-mono truncate">
+                            {photo.coords.lat.toFixed(5)}, {photo.coords.lng.toFixed(5)}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-amber-600">No GPS</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );

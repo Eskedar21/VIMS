@@ -34,11 +34,11 @@ const DesktopHeader = () => {
           onClick={() => navigate('/dashboard')}
           className="flex flex-col leading-tight hover:opacity-80 transition"
         >
-          <span className="text-2xl font-bold tracking-tight text-[#009639]">
+          <span className="text-2xl font-bold tracking-tight text-[#88bf47]">
             VIS
           </span>
           <span className="text-[10px] text-gray-500 -mt-1">
-            powered by <span className="font-semibold text-[#00652E]">Ethiotelecom</span>
+            powered by <span className="font-semibold text-[#0fa84a]">Ethiotelecom</span>
           </span>
         </button>
       </div>
@@ -55,8 +55,8 @@ const DesktopHeader = () => {
                 onClick={() => navigate(item.path)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                   isActive
-                    ? 'bg-[#009639] text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-[#009639]'
+                    ? 'bg-[#88bf47] text-white'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-[#88bf47]'
                 }`}
               >
                 {item.label}
@@ -113,7 +113,7 @@ const DesktopHeader = () => {
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="px-2 py-1 rounded border border-gray-200 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#009639]/30"
+            className="px-2 py-1 rounded border border-gray-200 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#88bf47]/30"
             title="Language"
           >
             {LANGUAGES.map((lang) => (
@@ -125,8 +125,8 @@ const DesktopHeader = () => {
 
           {/* User Profile */}
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full bg-[#009639]/10 flex items-center justify-center">
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-[#009639]">
+            <div className="w-8 h-8 rounded-full bg-[#88bf47]/10 flex items-center justify-center">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-[#88bf47]">
                 <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" />
                 <path
                   d="M4 21c0-3.866 3.582-7 8-7s8 3.134 8 7"

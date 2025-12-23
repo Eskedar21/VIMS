@@ -118,7 +118,7 @@ const HelpPage = () => {
           placeholder="Search help topics..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-4 py-2 rounded-lg border border-gray-200 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#009639]/20"
+          className="px-4 py-2 rounded-lg border border-gray-200 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#88bf47]/20"
         />
       </div>
 
@@ -133,7 +133,7 @@ const HelpPage = () => {
             <div className="space-y-4">
               {filteredContent.map((item, i) => (
                 <div key={i} className="border-b border-gray-100 pb-4 last:border-0">
-                  <p className="text-xs text-[#009639] font-medium mb-1">{item.section}</p>
+                  <p className="text-xs text-[#88bf47] font-medium mb-1">{item.section}</p>
                   <p className="font-medium text-gray-900">{item.q}</p>
                   <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{item.a}</p>
                 </div>
@@ -152,7 +152,7 @@ const HelpPage = () => {
                   onClick={() => setActiveSection(section.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition ${
                     activeSection === section.id
-                      ? 'bg-[#009639] text-white'
+                      ? 'bg-[#88bf47] text-white'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -178,7 +178,7 @@ const HelpPage = () => {
           <div className="lg:col-span-3">
             <div className="bg-white rounded-xl border border-gray-100 p-6">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-[#009639]">{currentSection?.icon}</span>
+                <span className="text-[#88bf47]">{currentSection?.icon}</span>
                 <h2 className="text-lg font-semibold text-gray-900">{currentSection?.title}</h2>
               </div>
               <div className="space-y-4">
@@ -195,7 +195,7 @@ const HelpPage = () => {
       )}
 
       {/* Quick Reference Card */}
-      <div className="bg-gradient-to-r from-[#009639] to-[#007c2d] rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-[#88bf47] to-[#0fa84a] rounded-xl p-6 text-white">
         <h3 className="font-semibold text-lg mb-3">Quick Reference</h3>
         <div className="grid md:grid-cols-3 gap-4 text-sm">
           <div>

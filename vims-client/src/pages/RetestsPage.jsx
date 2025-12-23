@@ -42,7 +42,7 @@ const RetestsPage = () => {
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
               activeTab === tab.key
-                ? 'bg-[#009639] text-white'
+                ? 'bg-[#88bf47] text-white'
                 : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
@@ -74,7 +74,7 @@ const RetestsPage = () => {
               {filteredData.map((row) => (
                 <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                   <td className="px-4 py-3 text-gray-600">{row.date}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-[#009639]">{row.id}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#88bf47]">{row.id}</td>
                   <td className="px-4 py-3 font-semibold">{row.plate}</td>
                   <td className="px-4 py-3 text-gray-600">{row.vehicleType}</td>
                   <td className="px-4 py-3 text-red-600 text-xs">{row.failReason}</td>
@@ -87,7 +87,7 @@ const RetestsPage = () => {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => navigate('/inspection')}
-                      className="text-xs text-[#009639] hover:underline font-medium"
+                      className="text-xs text-[#88bf47] hover:underline font-medium"
                     >
                       Start Re-test
                     </button>

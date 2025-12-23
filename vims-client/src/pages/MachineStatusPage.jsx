@@ -226,7 +226,7 @@ const MachineStatusPage = () => {
           <button
             onClick={refreshStatus}
             disabled={isRefreshing}
-            className="px-4 py-2 rounded-lg bg-[#009639] text-white text-sm font-semibold hover:bg-[#007c2d] disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg bg-[#88bf47] text-white text-sm font-semibold hover:bg-[#0fa84a] disabled:opacity-50 flex items-center gap-2"
           >
             <span className={isRefreshing ? 'animate-spin' : ''}>{Icon.refresh}</span>
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
