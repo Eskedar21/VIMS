@@ -1,5 +1,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useInspectionSave } from '../hooks/useInspectionSave';
+import { getPhotosByInspectionId } from '../utils/photoStorage';
 
 // Print styles for A4 PDF - optimized for certificate and report printing
 const printStyles = `
@@ -212,7 +214,7 @@ const VehicleInfoBar = ({ compact = false }) => {
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${VEHICLE.category === 'HEAVY' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${VEHICLE.category === 'HEAVY' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-[#1d8dcc]'}`}>
               {VEHICLE.category === 'HEAVY' ? Icon.truck : Icon.car}
             </div>
             <div>
@@ -222,7 +224,7 @@ const VehicleInfoBar = ({ compact = false }) => {
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400">Inspection ID</p>
-            <p className="text-sm font-mono font-bold text-[#009639]">{VEHICLE.inspectionId}</p>
+            <p className="text-sm font-mono font-bold text-[#88bf47]">{VEHICLE.inspectionId}</p>
           </div>
         </div>
       </div>
@@ -404,64 +406,28 @@ const ResultPage = () => {
   const [isFinalized, setIsFinalized] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [reportId, setReportId] = useState(null);
-  const [showPayment, setShowPayment] = useState(false);
-  const [paymentDone, setPaymentDone] = useState(false);
-  const [paymentInfo, setPaymentInfo] = useState(null);
   const [showCertModal, setShowCertModal] = useState(false);
   const [stickerNo, setStickerNo] = useState('');
   const [showReport, setShowReport] = useState(false);
   const [showCert, setShowCert] = useState(false);
   const [certNo, setCertNo] = useState('');
+  
+  const { saveInspectionData, saving } = useInspectionSave();
 
-  // Check payment status from session storage when component mounts
+  // Check if inspection is already finalized
   useEffect(() => {
-    const storedPaymentStatus = getSession('vims.inspection.paymentStatus');
-    if (storedPaymentStatus === 'Paid') {
-      const vehicle = getStoredVehicle();
-      const vehicleCategory = vehicle?.category || 'HEAVY';
-      setPaymentDone(true);
-      setPaymentInfo({
-        method: 'TeleBirr',
-        transactionId: `TB${Date.now()}`,
-        amount: FEES[vehicleCategory]?.total || 402.50,
-      });
+    const hasInspectionId = getSession('vims.inspection.id');
+    if (hasInspectionId) {
       setIsFinalized(true);
       setReportId(getSession('vims.inspection.id') || generateGUID());
     }
   }, []);
-
-  // Auto-open TeleBirr modal for new inspections without payment
-  useEffect(() => {
-    if (paymentDone) return; // Don't open if payment is already done
-    
-    const storedPaymentStatus = getSession('vims.inspection.paymentStatus');
-    const hasInspectionId = getSession('vims.inspection.id');
-    const hasVisualData = getStoredVisual();
-    const hasMachineData = getStoredMachine();
-    
-    // Auto-open for new inspections (has inspection data) or pending payment status
-    if (hasInspectionId && (hasVisualData || hasMachineData) && storedPaymentStatus !== 'Paid') {
-      const timer = setTimeout(() => setShowPayment(true), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [paymentDone]);
 
   // Auto-show report and print if print parameter is present
   useEffect(() => {
     if (searchParams.get('print') === 'true') {
       // Mark as finalized and show report
       setIsFinalized(true);
-      const storedPaymentStatus = getSession('vims.inspection.paymentStatus');
-      if (storedPaymentStatus === 'Paid') {
-        const vehicle = getStoredVehicle();
-        const vehicleCategory = vehicle?.category || 'HEAVY';
-        setPaymentDone(true);
-        setPaymentInfo({
-          method: 'TeleBirr',
-          transactionId: `TB${Date.now()}`,
-          amount: FEES[vehicleCategory]?.total || 402.50,
-        });
-      }
       setReportId(getSession('vims.inspection.id') || generateGUID());
       setShowReport(true);
       
@@ -534,22 +500,101 @@ const ResultPage = () => {
     return d.toLocaleDateString('en-GB');
   }, []);
 
-  const handleFinalize = () => {
+  const handleFinalize = async () => {
     setIsFinalizing(true);
-    setTimeout(() => {
-      const id = generateGUID();
-      setReportId(id);
+    try {
+      const inspectionId = getSession('vims.inspection.id') || `VIS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const storedVehicle = getStoredVehicle();
+      const storedVisual = getStoredVisual();
+      const storedMachine = getStoredMachine();
+      
+      // Get photos from storage
+      const photosData = getPhotosByInspectionId(inspectionId);
+      const photos = photosData?.photos || {
+        registration: storedVehicle?.photo || null,
+        inspection: storedVisual?.photos || [],
+        machineTest: storedMachine?.photos || [],
+      };
+      
+      // Prepare machine results
+      const allMachineResults = storedMachine?.results || getMachineResults() || [];
+      const formattedMachineResults = allMachineResults.map(result => ({
+        test: result.test || result.name,
+        testType: result.testType,
+        value: result.value || result.result,
+        unit: result.unit || '%',
+        status: result.status === 'PASS' ? 'Pass' : 'Fail',
+        threshold: result.threshold,
+        minValue: result.minValue,
+        maxValue: result.maxValue,
+        timestamp: result.timestamp || new Date().toISOString(),
+      }));
+      
+      // Prepare visual results
+      const visualResults = (storedVisual?.results || []).map(result => ({
+        item: result.item || result.name,
+        category: result.category,
+        status: result.status === 'PASS' ? 'Pass' : 'Fail',
+        severity: result.severity || 'Info',
+        notes: result.notes,
+        photoId: result.photoId,
+        timestamp: result.timestamp || new Date().toISOString(),
+      }));
+      
+      // Calculate cycle time
+      const startTime = new Date(VEHICLE.testStartTime);
+      const endTime = new Date();
+      const cycleTimeSeconds = Math.floor((endTime - startTime) / 1000);
+      
+      // Prepare inspection data
+      const inspectionData = {
+        id: inspectionId,
+        vehicle: {
+          plateNumber: VEHICLE.plate,
+          vin: VEHICLE.chassis,
+          make: VEHICLE.brandModel?.split(' ')[0] || '',
+          model: VEHICLE.brandModel?.split(' ').slice(1).join(' ') || '',
+          owner: {
+            name: VEHICLE.owner,
+          },
+          vehicleType: VEHICLE.vehicleType,
+          category: VEHICLE.category,
+          kilometerReading: parseInt(VEHICLE.kilometerReading) || 0,
+        },
+        inspectorId: 'inspector-1',
+        inspectorName: 'Inspector',
+        centerId: 'center-1',
+        centerName: 'Addis Ababa / Lane 1',
+        status: overallResult === 'PASS' ? 'Passed' : 'Failed',
+        overallResult: overallResult,
+        type: 'Initial Inspection',
+        amount: FEES[VEHICLE.category]?.total || 0,
+        inspectionDate: new Date().toISOString(),
+        inspectionDateStart: VEHICLE.testStartTime,
+        inspectionDateEnd: new Date().toISOString(),
+        cycleTimeSeconds: cycleTimeSeconds,
+        machineResults: formattedMachineResults,
+        visualResults: visualResults,
+        photos: photos,
+        certificateNumber: certNo || null,
+        certificateIssueDate: certNo ? new Date().toISOString() : null,
+        certificateExpiryDate: certNo ? expiryDate : null,
+      };
+      
+      // Save to database
+      await saveInspectionData(inspectionData);
+      
+      setReportId(inspectionId);
       setIsFinalized(true);
+      window.sessionStorage.setItem('vims.report.id', inspectionId);
+    } catch (error) {
+      console.error('Failed to save inspection:', error);
+      alert('Failed to save inspection. Please try again.');
+    } finally {
       setIsFinalizing(false);
-      window.sessionStorage.setItem('vims.report.id', id);
-    }, 800);
+    }
   };
 
-  const handlePaymentSuccess = (info) => {
-    setPaymentInfo(info);
-    setPaymentDone(true);
-    setShowPayment(false);
-  };
 
   const handleIssueCert = () => {
     setCertNo(generateCertificateNo());
@@ -570,7 +615,6 @@ const ResultPage = () => {
       ['Plate', VEHICLE.plate],
       ['Owner', VEHICLE.owner],
       ['Result', overallResult],
-      ['Payment', paymentInfo ? `${paymentInfo.transactionId} - ETB ${paymentInfo.amount}` : 'N/A'],
     ];
     const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
     const a = document.createElement('a');
@@ -590,7 +634,7 @@ const ResultPage = () => {
           </div>
           <div className="flex gap-3">
             <button onClick={() => setShowReport(false)} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center gap-2">{Icon.back} Back</button>
-            <button onClick={handlePrint} className="px-6 py-2 rounded-lg bg-[#009639] text-white font-semibold hover:bg-[#007c2d] flex items-center gap-2">{Icon.print} Print Report</button>
+            <button onClick={handlePrint} className="px-6 py-2 rounded-lg bg-[#88bf47] text-white font-semibold hover:bg-[#0fa84a] flex items-center gap-2">{Icon.print} Print Report</button>
           </div>
         </div>
 
@@ -1032,13 +1076,6 @@ const ResultPage = () => {
             <p className="text-[9px] text-gray-500 mt-2">Valid Until: <strong>{expiryDate}</strong></p>
           </div>
 
-          {paymentInfo && (
-            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 text-[10px] flex justify-between">
-              <span>Payment: <strong>{paymentInfo.method || 'TeleBirr'}</strong></span>
-              <span>Ref: <strong className="font-mono">{paymentInfo.transactionId}</strong></span>
-              <span>Amount: <strong className="text-green-700">ETB {paymentInfo.amount}</strong></span>
-            </div>
-          )}
 
           <p className="text-center text-[8px] text-gray-400 mt-2 pt-1 border-t">(እባክዎ ከመጠቀምዎ በፊት ትክክለኛ መሆኑን ያረጋግጡ / PLEASE MAKE SURE THAT THIS IS THE CORRECT ISSUE BEFORE USE) • ገጽ 2 ከ 2</p>
         </div>
@@ -1057,7 +1094,7 @@ const ResultPage = () => {
           </div>
           <div className="flex gap-3">
             <button onClick={() => setShowCert(false)} className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center gap-2">{Icon.back} Back</button>
-            <button onClick={handlePrint} className="px-6 py-2 rounded-lg bg-[#009639] text-white font-semibold hover:bg-[#007c2d] flex items-center gap-2">{Icon.print} Print Certificate</button>
+            <button onClick={handlePrint} className="px-6 py-2 rounded-lg bg-[#88bf47] text-white font-semibold hover:bg-[#0fa84a] flex items-center gap-2">{Icon.print} Print Certificate</button>
           </div>
         </div>
 
@@ -1073,7 +1110,7 @@ const ResultPage = () => {
               </div>
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-600">{Icon.shield}</div>
             </div>
-            <h3 className="text-xl font-bold text-[#009639] uppercase">Annual Technical Inspection Certificate</h3>
+            <h3 className="text-xl font-bold text-[#88bf47] uppercase">Annual Technical Inspection Certificate</h3>
             <p className="text-sm text-gray-600">የዓመታዊ ቴክኒካል ምርመራ የምስክር ወረቀት</p>
             <p className="text-xs text-gray-500 mt-1">Certificate No: <strong>{certNo}</strong></p>
           </div>
@@ -1121,24 +1158,24 @@ const ResultPage = () => {
                   <td className="border px-3 py-2 text-center italic text-gray-500">Getu T.</td>
                   <td className="border px-3 py-2">Alemayehu Bekele</td>
                   <td className="border px-3 py-2 text-center italic text-gray-500">A. Bekele</td>
-                  <td className="border px-3 py-2 text-center font-bold text-[#009639]">{stickerNo}</td>
+                  <td className="border px-3 py-2 text-center font-bold text-[#88bf47]">{stickerNo}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           {/* Result */}
-          <div className={`border-2 rounded-lg p-6 mb-6 ${overallResult === 'PASS' ? 'border-[#009639] bg-green-50' : 'border-red-500 bg-red-50'}`}>
+          <div className={`border-2 rounded-lg p-6 mb-6 ${overallResult === 'PASS' ? 'border-[#88bf47] bg-green-50' : 'border-red-500 bg-red-50'}`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Overall Result / የጠቅላላ ውጤት:</p>
-                <p className={`text-3xl font-bold ${overallResult === 'PASS' ? 'text-[#009639]' : 'text-red-600'}`}>
+                <p className={`text-3xl font-bold ${overallResult === 'PASS' ? 'text-[#88bf47]' : 'text-red-600'}`}>
                   {overallResult === 'PASS' ? '✓ PASSED / አልፏል' : '✗ FAILED / አላለፈም'}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">Registration Sticker:</p>
-                <p className={`text-3xl font-bold ${overallResult === 'PASS' ? 'text-[#009639]' : 'text-red-600'}`}>{stickerNo}</p>
+                <p className={`text-3xl font-bold ${overallResult === 'PASS' ? 'text-[#88bf47]' : 'text-red-600'}`}>{stickerNo}</p>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 gap-4 text-sm">
@@ -1161,7 +1198,7 @@ const ResultPage = () => {
                 <p>Inspection Date: {inspectionDate}</p>
               </div>
               <div className="text-right">
-                <p>Valid Until: <strong className="text-[#009639]">{expiryDate}</strong></p>
+                <p>Valid Until: <strong className="text-[#88bf47]">{expiryDate}</strong></p>
                 <p className="text-xs mt-1">Valid for 1 year from inspection date</p>
               </div>
             </div>
@@ -1175,17 +1212,15 @@ const ResultPage = () => {
   // Main Result Page
   return (
     <div className="space-y-4" ref={printRef}>
-      {showPayment && <TeleBirrModal onSuccess={handlePaymentSuccess} onCancel={() => setShowPayment(false)} />}
-      
       {showCertModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Issue Certificate</h3>
             <p className="text-sm text-gray-500 mb-4">Enter the Registration Sticker Number</p>
-            <input type="text" value={stickerNo} onChange={e => setStickerNo(e.target.value.toUpperCase())} placeholder="STK-2025-00001" className="w-full h-12 px-4 rounded-lg border border-gray-200 text-lg font-mono focus:border-[#009639] focus:ring-2 focus:ring-[#009639]/20 outline-none mb-4" autoFocus />
+            <input type="text" value={stickerNo} onChange={e => setStickerNo(e.target.value.toUpperCase())} placeholder="STK-2025-00001" className="w-full h-12 px-4 rounded-lg border border-gray-200 text-lg font-mono focus:border-[#88bf47] focus:ring-2 focus:ring-[#88bf47]/20 outline-none mb-4" autoFocus />
             <div className="flex gap-3">
               <button onClick={() => setShowCertModal(false)} className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600">Cancel</button>
-              <button onClick={handleCertSubmit} disabled={!stickerNo.trim()} className="flex-1 px-4 py-2.5 rounded-lg bg-[#009639] text-white font-semibold disabled:opacity-50">Preview</button>
+              <button onClick={handleCertSubmit} disabled={!stickerNo.trim()} className="flex-1 px-4 py-2.5 rounded-lg bg-[#88bf47] text-white font-semibold disabled:opacity-50">Preview</button>
             </div>
           </div>
         </div>
@@ -1203,28 +1238,6 @@ const ResultPage = () => {
         <div className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${overallResult === 'PASS' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
           {overallResult === 'PASS' ? Icon.check : Icon.x}
           {overallResult}
-        </div>
-      </div>
-
-      {/* Payment Card */}
-      <div className={`bg-white rounded-xl border p-5 ${paymentDone ? 'border-green-200 bg-green-50/30' : 'border-amber-200 bg-amber-50/30'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${paymentDone ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
-              {paymentDone ? Icon.check : Icon.payment}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">{paymentDone ? 'Payment Complete' : 'Payment Required'}</h3>
-              <p className="text-sm text-gray-500">
-                {paymentDone ? `${paymentInfo?.method || 'TeleBirr'} • ${paymentInfo?.transactionId}` : `Fee: ETB ${FEES[VEHICLE.category]?.total.toFixed(2)}`}
-              </p>
-            </div>
-          </div>
-          {!paymentDone && (
-            <button onClick={() => setShowPayment(true)} className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-[#E31937] to-[#FF6B35] text-white font-semibold hover:opacity-90 flex items-center gap-2">
-              {Icon.payment} Pay with TeleBirr
-            </button>
-          )}
         </div>
       </div>
 
@@ -1310,7 +1323,7 @@ const ResultPage = () => {
 
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200">
-        <button onClick={handleFinalize} disabled={isFinalized || isFinalizing || !paymentDone} className="px-6 py-2.5 rounded-lg bg-[#009639] text-white font-semibold hover:bg-[#007c2d] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+        <button onClick={handleFinalize} disabled={isFinalized || isFinalizing} className="px-6 py-2.5 rounded-lg bg-[#88bf47] text-white font-semibold hover:bg-[#0fa84a] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
           {isFinalizing ? 'Finalizing...' : isFinalized ? <>{Icon.check} Finalized</> : 'Finalize Report'}
         </button>
 
@@ -1324,7 +1337,7 @@ const ResultPage = () => {
             </button>
             <button 
               onClick={handleIssueCert} 
-              className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-lg bg-[#1d8dcc] text-white font-semibold hover:bg-[#1a7bb8] flex items-center gap-2"
             >
               {Icon.certificate} Issue Certificate
             </button>
@@ -1336,7 +1349,6 @@ const ResultPage = () => {
         </button>
       </div>
 
-      {!paymentDone && <p className="text-xs text-amber-600 text-center">Complete payment before finalizing</p>}
     </div>
   );
 };

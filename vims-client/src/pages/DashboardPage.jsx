@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getInspections } from '../db/inspectionDB';
 
 const DATE_RANGES = [
   { key: 'today', label: 'Today' },
@@ -11,48 +12,48 @@ const DATE_RANGES = [
 // Sample data for charts
 const CHART_DATA = {
   today: [
-    { label: '8AM', inspections: 3, revenue: 1050 },
-    { label: '9AM', inspections: 5, revenue: 1750 },
-    { label: '10AM', inspections: 4, revenue: 1400 },
-    { label: '11AM', inspections: 6, revenue: 2100 },
-    { label: '12PM', inspections: 2, revenue: 700 },
-    { label: '1PM', inspections: 4, revenue: 1400 },
-    { label: '2PM', inspections: 5, revenue: 1750 },
+    { label: '8AM', inspections: 3, passCount: 2, failCount: 1 },
+    { label: '9AM', inspections: 5, passCount: 4, failCount: 1 },
+    { label: '10AM', inspections: 4, passCount: 3, failCount: 1 },
+    { label: '11AM', inspections: 6, passCount: 5, failCount: 1 },
+    { label: '12PM', inspections: 2, passCount: 2, failCount: 0 },
+    { label: '1PM', inspections: 4, passCount: 3, failCount: 1 },
+    { label: '2PM', inspections: 5, passCount: 4, failCount: 1 },
   ],
   week: [
-    { label: 'Mon', inspections: 24, revenue: 8400 },
-    { label: 'Tue', inspections: 28, revenue: 9800 },
-    { label: 'Wed', inspections: 22, revenue: 7700 },
-    { label: 'Thu', inspections: 31, revenue: 10850 },
-    { label: 'Fri', inspections: 26, revenue: 9100 },
-    { label: 'Sat', inspections: 18, revenue: 6300 },
-    { label: 'Sun', inspections: 8, revenue: 2800 },
+    { label: 'Mon', inspections: 24, passCount: 20, failCount: 4 },
+    { label: 'Tue', inspections: 28, passCount: 23, failCount: 5 },
+    { label: 'Wed', inspections: 22, passCount: 18, failCount: 4 },
+    { label: 'Thu', inspections: 31, passCount: 26, failCount: 5 },
+    { label: 'Fri', inspections: 26, passCount: 22, failCount: 4 },
+    { label: 'Sat', inspections: 18, passCount: 15, failCount: 3 },
+    { label: 'Sun', inspections: 8, passCount: 7, failCount: 1 },
   ],
   month: [
-    { label: 'Week 1', inspections: 142, revenue: 49700 },
-    { label: 'Week 2', inspections: 168, revenue: 58800 },
-    { label: 'Week 3', inspections: 155, revenue: 54250 },
-    { label: 'Week 4', inspections: 178, revenue: 62300 },
+    { label: 'Week 1', inspections: 142, passCount: 118, failCount: 24 },
+    { label: 'Week 2', inspections: 168, passCount: 139, failCount: 29 },
+    { label: 'Week 3', inspections: 155, passCount: 129, failCount: 26 },
+    { label: 'Week 4', inspections: 178, passCount: 148, failCount: 30 },
   ],
 };
 
 const MOCK_INSPECTIONS = [
-  { id: 'VIS-2025-0023', dateTime: '2025-11-26 09:45', plate: 'ET 12345A', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0022', dateTime: '2025-11-26 09:12', plate: 'ET 87923B', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'FAIL', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0021', dateTime: '2025-11-26 08:55', plate: 'ET 29487C', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', amount: 500, paymentStatus: 'Pending', syncStatus: 'Pending' },
-  { id: 'VIS-2025-0020', dateTime: '2025-11-25 16:30', plate: 'ET 85216Z', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'PASS', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0019', dateTime: '2025-11-25 15:20', plate: 'ET 44821D', vehicleType: 'Motorcycle', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'PASS', amount: 150, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0018', dateTime: '2025-11-25 14:10', plate: 'ET 99123E', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'FAIL', amount: 350, paymentStatus: 'Failed', syncStatus: 'Failed' },
-  { id: 'VIS-2025-0017', dateTime: '2025-11-24 11:45', plate: 'ET 77654F', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'PASS', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0016', dateTime: '2025-11-24 10:30', plate: 'ET 33987G', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', amount: 500, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0015', dateTime: '2025-11-23 16:20', plate: 'ET 11223H', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'PASS', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0014', dateTime: '2025-11-23 15:00', plate: 'ET 44556I', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0013', dateTime: '2025-11-23 14:30', plate: 'ET 77889J', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'FAIL', amount: 500, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0012', dateTime: '2025-11-22 11:15', plate: 'ET 99001K', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'PASS', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0011', dateTime: '2025-11-22 10:00', plate: 'ET 22334L', vehicleType: 'Motorcycle', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', amount: 150, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0010', dateTime: '2025-11-21 16:45', plate: 'ET 55667M', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'PASS', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0009', dateTime: '2025-11-21 15:30', plate: 'ET 88990N', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'FAIL', amount: 350, paymentStatus: 'Paid', syncStatus: 'Synced' },
-  { id: 'VIS-2025-0008', dateTime: '2025-11-20 14:20', plate: 'ET 11122O', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', amount: 500, paymentStatus: 'Paid', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0023', dateTime: '2025-11-26 09:45', plate: 'ET 12345A', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0022', dateTime: '2025-11-26 09:12', plate: 'ET 87923B', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'FAIL', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0021', dateTime: '2025-11-26 08:55', plate: 'ET 29487C', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', syncStatus: 'Pending' },
+  { id: 'VIS-2025-0020', dateTime: '2025-11-25 16:30', plate: 'ET 85216Z', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0019', dateTime: '2025-11-25 15:20', plate: 'ET 44821D', vehicleType: 'Motorcycle', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0018', dateTime: '2025-11-25 14:10', plate: 'ET 99123E', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'FAIL', syncStatus: 'Failed' },
+  { id: 'VIS-2025-0017', dateTime: '2025-11-24 11:45', plate: 'ET 77654F', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0016', dateTime: '2025-11-24 10:30', plate: 'ET 33987G', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0015', dateTime: '2025-11-23 16:20', plate: 'ET 11223H', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0014', dateTime: '2025-11-23 15:00', plate: 'ET 44556I', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0013', dateTime: '2025-11-23 14:30', plate: 'ET 77889J', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'FAIL', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0012', dateTime: '2025-11-22 11:15', plate: 'ET 99001K', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0011', dateTime: '2025-11-22 10:00', plate: 'ET 22334L', vehicleType: 'Motorcycle', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0010', dateTime: '2025-11-21 16:45', plate: 'ET 55667M', vehicleType: 'Passenger Car', center: 'Addis Ababa / Lane 3', technician: 'Dawit Haile', result: 'PASS', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0009', dateTime: '2025-11-21 15:30', plate: 'ET 88990N', vehicleType: 'Mini Bus', center: 'Addis Ababa / Lane 2', technician: 'Sara Tesfaye', result: 'FAIL', syncStatus: 'Synced' },
+  { id: 'VIS-2025-0008', dateTime: '2025-11-20 14:20', plate: 'ET 11122O', vehicleType: 'Cargo Truck', center: 'Addis Ababa / Lane 1', technician: 'Abebe Kebede', result: 'PASS', syncStatus: 'Synced' },
 ];
 
 const ROWS_PER_PAGE = 5;
@@ -170,10 +171,13 @@ const DashboardPage = () => {
         const dateStr = date.toISOString().split('T')[0];
         const dayInspections = MOCK_INSPECTIONS.filter(r => r.dateTime.startsWith(dateStr));
         const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const passCount = dayInspections.filter(r => r.result === 'PASS').length;
+        const failCount = dayInspections.filter(r => r.result === 'FAIL').length;
         customData.push({
           label,
           inspections: dayInspections.length || Math.floor(Math.random() * 5) + 1,
-          revenue: dayInspections.reduce((sum, r) => sum + r.amount, 0) || (Math.floor(Math.random() * 5) + 1) * 350,
+          passCount: passCount || Math.floor(Math.random() * 3) + 1,
+          failCount: failCount || Math.floor(Math.random() * 2),
         });
       }
       return customData.length > 0 ? customData : CHART_DATA.today;
@@ -184,18 +188,56 @@ const DashboardPage = () => {
   // KPI calculations
   const kpis = useMemo(() => {
     const totalInspections = chartData.reduce((sum, d) => sum + d.inspections, 0);
-    const totalRevenue = chartData.reduce((sum, d) => sum + d.revenue, 0);
+    const totalPassCount = chartData.reduce((sum, d) => sum + (d.passCount || 0), 0);
+    const totalFailCount = chartData.reduce((sum, d) => sum + (d.failCount || 0), 0);
     return {
       totalInspections,
-      passCount: Math.round(totalInspections * 0.83),
-      failCount: Math.round(totalInspections * 0.17),
-      totalRevenue,
+      passCount: totalPassCount || Math.round(totalInspections * 0.83),
+      failCount: totalFailCount || Math.round(totalInspections * 0.17),
     };
   }, [chartData]);
 
-  // Filtered and sorted data (table always shows all data, only search filters it)
+  const [dbInspections, setDbInspections] = useState([]);
+  
+  // Fetch inspections from database
+  useEffect(() => {
+    const fetchInspections = async () => {
+      try {
+        const inspections = await getInspections({});
+        // Convert database format to dashboard format
+        const formatted = inspections.map(ins => ({
+          id: ins.id,
+          dateTime: new Date(ins.inspectionDate || ins.createdAt).toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          }).replace(',', ''),
+          plate: ins.vehicle?.plateNumber || '—',
+          vehicleType: ins.vehicle?.vehicleType || '—',
+          center: ins.centerName || '—',
+          technician: ins.inspectorName || '—',
+          result: ins.overallResult === 'Passed' ? 'PASS' : ins.overallResult === 'Failed' ? 'FAIL' : 'PENDING',
+          syncStatus: ins.syncStatus === 'synced' ? 'Synced' : ins.syncStatus === 'pending' ? 'Pending' : 'Failed',
+        }));
+        setDbInspections(formatted);
+      } catch (error) {
+        console.error('Error fetching inspections:', error);
+      }
+    };
+    fetchInspections();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchInspections, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Filtered and sorted data (table shows database + mock data, only search filters it)
   const filteredData = useMemo(() => {
-    let data = [...MOCK_INSPECTIONS];
+    // Combine database inspections with mock data (avoid duplicates)
+    const mockIds = new Set(MOCK_INSPECTIONS.map(m => m.id));
+    const uniqueDbInspections = dbInspections.filter(db => !mockIds.has(db.id));
+    let data = [...uniqueDbInspections, ...MOCK_INSPECTIONS];
     
     // Filter by search query only
     if (searchQuery) {
@@ -215,7 +257,7 @@ const DashboardPage = () => {
       return 0;
     });
     return data;
-  }, [searchQuery, sortConfig]);
+  }, [searchQuery, sortConfig, dbInspections]);
 
   // Vehicle history search results
   const vehicleHistoryResults = useMemo(() => {
@@ -228,10 +270,6 @@ const DashboardPage = () => {
     );
   }, [vehicleSearchQuery]);
 
-  // Pending payments
-  const pendingPayments = useMemo(() => {
-    return MOCK_INSPECTIONS.filter((row) => row.paymentStatus === 'Pending');
-  }, []);
 
   const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
   const paginatedData = filteredData.slice(
@@ -259,9 +297,8 @@ const DashboardPage = () => {
 
   const statusBadge = (status, type) => {
     const styles = {
-      result: { PASS: 'bg-green-100 text-green-700', FAIL: 'bg-red-100 text-red-600' },
-      payment: { Paid: 'bg-green-100 text-green-700', Pending: 'bg-amber-100 text-amber-700', Failed: 'bg-red-100 text-red-600' },
-      sync: { Synced: 'bg-green-100 text-green-700', Pending: 'bg-amber-100 text-amber-700', Failed: 'bg-red-100 text-red-600' },
+      result: { PASS: 'bg-green-100 text-[#0fa84a]', FAIL: 'bg-red-100 text-red-600' },
+      sync: { Synced: 'bg-green-100 text-[#0fa84a]', Pending: 'bg-amber-100 text-amber-700', Failed: 'bg-red-100 text-red-600' },
     };
     return styles[type]?.[status] || 'bg-gray-100 text-gray-600';
   };
@@ -278,10 +315,9 @@ const DashboardPage = () => {
             sessionStorage.removeItem('vims.inspection.category');
             sessionStorage.removeItem('vims.inspection.registration');
             sessionStorage.removeItem('vims.inspection.checklist');
-            sessionStorage.removeItem('vims.inspection.paymentStatus');
             navigate('/inspection');
           }}
-          className="px-5 py-2.5 rounded-lg bg-[#009639] text-white font-semibold hover:bg-[#007c2d] transition flex items-center gap-2"
+          className="px-5 py-2.5 rounded-lg bg-[#88bf47] text-white font-semibold hover:bg-[#0fa84a] transition flex items-center gap-2"
         >
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -299,28 +335,6 @@ const DashboardPage = () => {
           </svg>
           Search Vehicle History
         </button>
-        <button 
-          type="button" 
-          onClick={() => {
-            setSearchQuery('');
-            const pendingRow = MOCK_INSPECTIONS.find(r => r.paymentStatus === 'Pending' || r.paymentStatus === 'Failed');
-            if (pendingRow) {
-              setSearchQuery(pendingRow.plate);
-            }
-          }}
-          className="px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50 transition flex items-center gap-2"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="2" y="5" width="20" height="14" rx="2" />
-            <path d="M2 10h20" />
-          </svg>
-          Pending Payments
-          {pendingPayments.length > 0 && (
-            <span className="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-              {pendingPayments.length}
-            </span>
-          )}
-        </button>
 
         <div className="ml-auto flex items-center gap-2 relative">
           <span className="text-sm text-gray-500">Period:</span>
@@ -337,7 +351,7 @@ const DashboardPage = () => {
                 setShowCustomDatePicker(true);
               }
             }}
-            className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#009639]/20"
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#88bf47]/20"
           >
             {DATE_RANGES.map((r) => (
               <option key={r.key} value={r.key}>
@@ -358,7 +372,7 @@ const DashboardPage = () => {
                     type="date"
                     value={customStartDate}
                     onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#009639]/20"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#88bf47]/20"
                   />
                 </div>
                 <div>
@@ -367,7 +381,7 @@ const DashboardPage = () => {
                     type="date"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#009639]/20"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#88bf47]/20"
                   />
                 </div>
                 <div className="flex gap-2 pt-2">
@@ -390,7 +404,7 @@ const DashboardPage = () => {
                       setCurrentPage(1);
                     }}
                     disabled={!customStartDate || !customEndDate}
-                    className="flex-1 px-3 py-2 text-sm text-white bg-[#009639] rounded-lg hover:bg-[#007c2d] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-3 py-2 text-sm text-white bg-[#88bf47] rounded-lg hover:bg-[#0fa84a] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Apply
                   </button>
@@ -411,8 +425,8 @@ const DashboardPage = () => {
               <circle cx="17" cy="17" r="2" />
             </svg>
           )},
-          { label: 'Pass Count', value: kpis.passCount, color: 'text-[#009639]', icon: (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-green-500">
+          { label: 'Pass Count', value: kpis.passCount, color: 'text-[#88bf47]', icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-[#88bf47]">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           )},
@@ -422,10 +436,10 @@ const DashboardPage = () => {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           )},
-          { label: 'Revenue (ETB)', value: kpis.totalRevenue.toLocaleString(), color: 'text-[#009639]', icon: (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-500">
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          { label: 'Pass Rate', value: `${Math.round((kpis.passCount / (kpis.passCount + kpis.failCount) || 0) * 100)}%`, color: 'text-[#88bf47]', icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#88bf47]">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
           )},
         ].map((kpi, i) => (
@@ -446,14 +460,29 @@ const DashboardPage = () => {
             <h3 className="text-sm font-semibold text-gray-900">Inspections Over Time</h3>
             <span className="text-xs text-gray-400">{dateRange === 'today' ? 'Hourly' : dateRange === 'week' ? 'Daily' : 'Weekly'}</span>
           </div>
-          <LineChart data={chartData} dataKey="inspections" color="#009639" height={160} label="Inspections" />
+          <LineChart data={chartData} dataKey="inspections" color="#88bf47" height={160} label="Inspections" />
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">Revenue Trend (ETB)</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Pass/Fail Trend</h3>
             <span className="text-xs text-gray-400">{dateRange === 'today' ? 'Hourly' : dateRange === 'week' ? 'Daily' : 'Weekly'}</span>
           </div>
-          <LineChart data={chartData} dataKey="revenue" color="#F59E0B" height={160} label="Revenue" />
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 rounded-full bg-[#88bf47]"></div>
+                <span className="text-xs text-gray-600 font-medium">Pass</span>
+              </div>
+              <LineChart data={chartData} dataKey="passCount" color="#88bf47" height={120} label="Pass" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 rounded-full bg-[#DC2626]"></div>
+                <span className="text-xs text-gray-600 font-medium">Fail</span>
+              </div>
+              <LineChart data={chartData} dataKey="failCount" color="#DC2626" height={120} label="Fail" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -466,7 +495,7 @@ const DashboardPage = () => {
             placeholder="Search by Plate, ID, or Technician..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-[#009639]/20"
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-[#88bf47]/20"
           />
         </div>
 
@@ -481,8 +510,6 @@ const DashboardPage = () => {
                   { key: 'vehicleType', label: 'Type' },
                   { key: 'technician', label: 'Technician' },
                   { key: 'result', label: 'Result' },
-                  { key: 'amount', label: 'Amount' },
-                  { key: 'paymentStatus', label: 'Payment' },
                   { key: 'syncStatus', label: 'Sync' },
                 ].map((col) => (
                   <th
@@ -503,19 +530,13 @@ const DashboardPage = () => {
               {paginatedData.map((row) => (
                 <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                   <td className="px-4 py-3 text-gray-600">{row.dateTime}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-[#009639]">{row.id}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#88bf47]">{row.id}</td>
                   <td className="px-4 py-3 font-semibold">{row.plate}</td>
                   <td className="px-4 py-3 text-gray-600">{row.vehicleType}</td>
                   <td className="px-4 py-3">{row.technician}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusBadge(row.result, 'result')}`}>
                       {row.result}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-medium">{row.amount}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge(row.paymentStatus, 'payment')}`}>
-                      {row.paymentStatus}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -529,10 +550,9 @@ const DashboardPage = () => {
                         onClick={() => {
                           // Store inspection data for result page
                           window.sessionStorage.setItem('vims.inspection.id', row.id);
-                          window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus);
                           navigate('/result');
                         }} 
-                        className="text-xs text-[#009639] hover:underline font-medium"
+                        className="text-xs text-[#88bf47] hover:underline font-medium"
                       >
                         View
                       </button>
@@ -540,7 +560,6 @@ const DashboardPage = () => {
                         onClick={() => {
                           // Store inspection ID for result page
                           window.sessionStorage.setItem('vims.inspection.id', row.id);
-                          window.sessionStorage.setItem('vims.inspection.paymentStatus', row.paymentStatus);
                           // Navigate to result page with print flag
                           navigate('/result?print=true');
                         }}
@@ -602,7 +621,7 @@ const DashboardPage = () => {
                 placeholder="Enter Plate Number, Chassis, or Owner..."
                 value={vehicleSearchQuery}
                 onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#009639]/20"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#88bf47]/20"
                 autoFocus
               />
             </div>

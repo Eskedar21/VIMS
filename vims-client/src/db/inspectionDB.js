@@ -141,7 +141,6 @@ export const saveInspection = async (inspectionData) => {
       centerName: inspectionData.centerName,
       status: inspectionData.status || 'Pending', // Passed, Failed, Pending, Conditional
       overallResult: inspectionData.overallResult || inspectionData.status,
-      paymentStatus: inspectionData.paymentStatus || 'Pending',
       syncStatus: 'pending', // pending, syncing, synced, failed
       type: inspectionData.type || 'Initial Inspection', // Initial, Retest, Re-inspection
       amount: inspectionData.amount || 0,
@@ -211,17 +210,17 @@ export const saveInspection = async (inspectionData) => {
     if (inspectionData.photos && typeof inspectionData.photos === 'object') {
       // Handle registration photos
       if (inspectionData.photos.registration) {
-        const photoBlob = await convertToBlob(inspectionData.photos.registration);
-        const photoId = await savePhotoBlob(photoBlob, inspection.id, 'registration');
-        // Store photo reference
+        const dataUrl = await convertToDataUrl(inspectionData.photos.registration);
+        const photoId = `PHOTO-${inspection.id}-registration-${Date.now()}`;
+        // Store photo with data URL
         await transaction.objectStore(STORES.PHOTOS).put({
           id: photoId,
           inspectionId: inspection.id,
           type: 'registration',
           category: 'registration',
           filename: `registration-${inspection.id}.jpg`,
-          size: photoBlob.size,
-          mimeType: photoBlob.type || 'image/jpeg',
+          dataUrl: dataUrl,
+          mimeType: 'image/jpeg',
           createdAt: new Date().toISOString(),
         });
       }
@@ -230,8 +229,8 @@ export const saveInspection = async (inspectionData) => {
       if (Array.isArray(inspectionData.photos.inspection)) {
         for (let i = 0; i < inspectionData.photos.inspection.length; i++) {
           const photo = inspectionData.photos.inspection[i];
-          const photoBlob = await convertToBlob(photo);
-          const photoId = await savePhotoBlob(photoBlob, inspection.id, `visual-${i}`);
+          const dataUrl = await convertToDataUrl(photo);
+          const photoId = `PHOTO-${inspection.id}-visual-${i}-${Date.now()}`;
           await transaction.objectStore(STORES.PHOTOS).put({
             id: photoId,
             inspectionId: inspection.id,
@@ -239,8 +238,8 @@ export const saveInspection = async (inspectionData) => {
             category: photo.category || 'inspection',
             item: photo.item,
             filename: `visual-${inspection.id}-${i}.jpg`,
-            size: photoBlob.size,
-            mimeType: photoBlob.type || 'image/jpeg',
+            dataUrl: dataUrl,
+            mimeType: 'image/jpeg',
             createdAt: new Date().toISOString(),
           });
         }
@@ -250,8 +249,8 @@ export const saveInspection = async (inspectionData) => {
       if (Array.isArray(inspectionData.photos.machineTest)) {
         for (let i = 0; i < inspectionData.photos.machineTest.length; i++) {
           const photo = inspectionData.photos.machineTest[i];
-          const photoBlob = await convertToBlob(photo);
-          const photoId = await savePhotoBlob(photoBlob, inspection.id, `machine-${i}`);
+          const dataUrl = await convertToDataUrl(photo);
+          const photoId = `PHOTO-${inspection.id}-machine-${i}-${Date.now()}`;
           await transaction.objectStore(STORES.PHOTOS).put({
             id: photoId,
             inspectionId: inspection.id,
@@ -259,8 +258,8 @@ export const saveInspection = async (inspectionData) => {
             category: photo.category || 'machine_test',
             test: photo.test,
             filename: `machine-${inspection.id}-${i}.jpg`,
-            size: photoBlob.size,
-            mimeType: photoBlob.type || 'image/jpeg',
+            dataUrl: dataUrl,
+            mimeType: 'image/jpeg',
             createdAt: new Date().toISOString(),
           });
         }
@@ -285,39 +284,33 @@ export const saveInspection = async (inspectionData) => {
 };
 
 /**
- * Convert various photo formats to Blob
+ * Convert various photo formats to Data URL
  */
-const convertToBlob = async (photo) => {
-  if (photo instanceof Blob) {
-    return photo;
-  }
-  if (photo instanceof File) {
-    return photo;
-  }
+const convertToDataUrl = async (photo) => {
   if (typeof photo === 'string') {
-    // Base64 or URL
+    // Already a data URL
     if (photo.startsWith('data:')) {
-      const response = await fetch(photo);
-      return await response.blob();
+      return photo;
     }
-    // URL
+    // URL - fetch and convert
     const response = await fetch(photo);
-    return await response.blob();
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+  if (photo instanceof Blob || photo instanceof File) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(photo);
+    });
   }
   throw new Error('Unsupported photo format');
-};
-
-/**
- * Save photo blob to IndexedDB
- */
-const savePhotoBlob = async (blob, inspectionId, photoType) => {
-  const db = await getDB();
-  const photoStore = db.transaction([STORES.PHOTOS], 'readwrite').objectStore(STORES.PHOTOS);
-  const photoId = `PHOTO-${inspectionId}-${photoType}-${Date.now()}`;
-  
-  // Store blob in a separate store or use FileReader
-  // For now, we'll store metadata and keep blob reference
-  return photoId;
 };
 
 /**
@@ -371,6 +364,90 @@ export const getInspections = async (filters = {}) => {
 
   const inspections = await getAllFromStore(index, filters);
   return inspections;
+};
+
+/**
+ * Get photos for an inspection ID
+ */
+export const getInspectionPhotos = async (inspectionId) => {
+  const db = await getDB();
+  const transaction = db.transaction([STORES.PHOTOS], 'readonly');
+  const photoIndex = transaction.objectStore(STORES.PHOTOS).index('inspectionId');
+  const photos = await getAllFromIndex(photoIndex, inspectionId);
+  
+  // Organize photos by type
+  const organized = {
+    registration: null,
+    inspection: [],
+    machineTest: [],
+  };
+  
+  photos.forEach((photo) => {
+    if (photo.type === 'registration') {
+      organized.registration = photo;
+    } else if (photo.type === 'visual') {
+      organized.inspection.push(photo);
+    } else if (photo.type === 'machine') {
+      organized.machineTest.push(photo);
+    }
+  });
+  
+  return organized;
+};
+
+/**
+ * Search inspections by query (plate, chassis, owner, etc.)
+ * Refined logic: 
+ * - If query looks like plate/chassis (contains numbers), search by plate and chassis
+ * - If query looks like owner name (text only), search by owner name
+ */
+export const searchInspections = async (query) => {
+  if (!query || !query.trim()) return [];
+  
+  try {
+    const db = await getDB();
+    if (!db) {
+      console.error('Database not initialized');
+      return [];
+    }
+    
+    const transaction = db.transaction([STORES.INSPECTIONS], 'readonly');
+    const store = transaction.objectStore(STORES.INSPECTIONS);
+    
+    const q = query.toLowerCase().trim();
+    const hasNumbers = /\d/.test(q); // Check if query contains numbers
+    
+    const inspections = await getAllFromStore(store, {});
+    
+    if (!inspections || inspections.length === 0) {
+      console.log('No inspections found in database');
+      return [];
+    }
+    
+    const filtered = inspections.filter((inspection) => {
+      if (!inspection || !inspection.vehicle) {
+        return false;
+      }
+      
+      const plate = (inspection.vehicle?.plateNumber || '').toLowerCase();
+      const chassis = (inspection.vehicle?.vin || '').toLowerCase();
+      const owner = (inspection.vehicle?.owner?.name || '').toLowerCase();
+      
+      // If query contains numbers, search by plate and chassis only
+      if (hasNumbers) {
+        return plate.includes(q) || chassis.includes(q);
+      }
+      // If query is text only, search by owner name
+      else {
+        return owner.includes(q);
+      }
+    });
+    
+    return filtered;
+  } catch (error) {
+    console.error('Error in searchInspections:', error);
+    return [];
+  }
 };
 
 /**
@@ -495,6 +572,93 @@ export const deleteInspection = async (inspectionId) => {
   }
   
   await transaction.complete;
+};
+
+/**
+ * Migrate mock inspections from dashboard to database
+ * This function converts mock inspection data to the database format
+ */
+export const migrateMockInspections = async (mockInspections) => {
+  try {
+    const db = await getDB();
+    if (!db) {
+      console.error('Database not initialized');
+      return;
+    }
+
+    const transaction = db.transaction([STORES.INSPECTIONS], 'readwrite');
+    const store = transaction.objectStore(STORES.INSPECTIONS);
+
+    // Generate owner names based on plate numbers for demo
+    const generateOwnerName = (plate) => {
+      const names = [
+        'Kebede Alemu', 'Sara Bekele', 'Dawit Haile', 'Abebe Kebede', 
+        'Sara Tesfaye', 'Tewodros Mekonnen', 'Meron Assefa', 'Yonas Tadesse',
+        'Hanna Girma', 'Solomon Getachew', 'Marta Yohannes', 'Daniel Fikru'
+      ];
+      const index = parseInt(plate.replace(/\D/g, '')) % names.length;
+      return names[index];
+    };
+
+    // Generate chassis numbers for demo
+    const generateChassis = (plate) => {
+      const num = plate.replace(/\D/g, '').padStart(12, '0');
+      return `WDB${num}${plate.slice(-1).charCodeAt(0)}`;
+    };
+
+    for (const mock of mockInspections) {
+      // Check if inspection already exists
+      const existing = await new Promise((resolve) => {
+        const request = store.get(mock.id);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+      });
+
+      if (existing) {
+        continue; // Skip if already exists
+      }
+
+      const inspection = {
+        id: mock.id,
+        vehicle: {
+          plateNumber: mock.plate,
+          vin: generateChassis(mock.plate),
+          make: mock.vehicleType.split(' ')[0] || 'Unknown',
+          model: mock.vehicleType.split(' ').slice(1).join(' ') || 'Unknown',
+          year: new Date().getFullYear() - Math.floor(Math.random() * 10),
+          owner: {
+            name: generateOwnerName(mock.plate),
+            phone: `09${Math.floor(Math.random() * 10000000).toString().padStart(8, '0')}`,
+            idNumber: `ID${Math.floor(Math.random() * 1000000)}`,
+          },
+          vehicleType: mock.vehicleType,
+          category: mock.vehicleType,
+        },
+        inspectorId: mock.technician,
+        inspectorName: mock.technician,
+        centerId: mock.center?.split(' / ')[0] || 'Addis Ababa',
+        centerName: mock.center || 'Addis Ababa / Lane 1',
+        status: mock.result === 'PASS' ? 'Passed' : 'Failed',
+        overallResult: mock.result,
+        syncStatus: mock.syncStatus?.toLowerCase() || 'synced',
+        type: 'Initial Inspection',
+        amount: 0,
+        inspectionDate: new Date(mock.dateTime).toISOString(),
+        inspectionDateStart: new Date(mock.dateTime).toISOString(),
+        inspectionDateEnd: new Date(new Date(mock.dateTime).getTime() + 30 * 60000).toISOString(),
+        cycleTimeSeconds: 30 * 60,
+        createdAt: new Date(mock.dateTime).toISOString(),
+        updatedAt: new Date(mock.dateTime).toISOString(),
+      };
+
+      await store.put(inspection);
+    }
+
+    await transaction.complete;
+    console.log(`Migrated ${mockInspections.length} mock inspections to database`);
+  } catch (error) {
+    console.error('Error migrating mock inspections:', error);
+  }
 };
 
 // Initialize database on module load
